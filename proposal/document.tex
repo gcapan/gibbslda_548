@@ -2,6 +2,7 @@
 
 \usepackage{amsmath}
 \usepackage{amsfonts}
+\usepackage{graphicx}
 
 \mode<presentation>{}
 
@@ -61,18 +62,33 @@
 
 \begin{frame}{Coupled Matrix Factorization for Recovering Topics}
 	
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=9cm]{images/nmf2.png}
+	\end{figure}
+	
 	\begin{itemize}
-		% TODO: image from SIU paper
-		\item ...
+		
+		\item Represent data with well-known algebraic structures
+		\item Jointly guide topic assignments from multimodal datasets, in a probabilistically sound framework
+		\item Easily extensible to semi-supervised learning, kernel methods
+		\item (T. and Cemgil, 2016)
 	\end{itemize}
 	
 \end{frame}
 
 \begin{frame}{Extended Coupled NMF for Topic Learning with Count Features}
 	
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=7cm]{images/ext_nmf.png}
+	\end{figure}
+	
 	\begin{itemize}
-		% TODO: new image describing model
-		\item ...
+		\item $ y_{ij} | W, H \sim GPO(\sum_{t} w_{it} h_{tj}, \phi) $
+		\item $ x_{kj} | V, H \sim GPO(\sum_{t} v_{kt} h_{tj}, \gamma) $
+		\item Guide topic modeling with numeric count data
+		\item Can assume priors $p(W), p(H), p(V)$ for Bayesian learning
 	\end{itemize}
 	
 \end{frame}

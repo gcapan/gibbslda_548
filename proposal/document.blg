@@ -2,7 +2,7 @@ This is BibTeX, Version 0.99d (TeX Live 2015)
 Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
 The top-level auxiliary file: document.aux
 I couldn't open database file zotero.bib
----line 25 of file document.aux
+---line 43 of file document.aux
  : \bibdata{zotero
  :                }
 I'm skipping whatever remains of this command

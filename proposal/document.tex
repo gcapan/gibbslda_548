@@ -1,0 +1,114 @@
+\documentclass[pdf]{beamer}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+
+\mode<presentation>{}
+
+\title{Extended Topic Models with Numerical Features}
+
+\author{G\" okhan \c Capan, Ali Caner T\" urkmen}
+\begin{document}
+	
+\begin{frame}
+	\titlepage
+\end{frame}
+
+\begin{frame}{Introduction}
+	
+	\begin{itemize}
+		\item Unsupervised learning, recover \emph{latent} topics in documents
+		\item Can be thought of as clustering. Loosely equivalent to link prediction.
+	\end{itemize}
+	
+\end{frame}
+
+\begin{frame}{Latent Dirichlet Allocation}
+	
+	\begin{itemize}
+		\item (Blei et al., 2003)
+	\end{itemize}
+	
+\end{frame}
+
+\begin{frame}{Comparison of Topic Models}
+	
+	\begin{itemize}
+		%TODO: comparison slide from blei
+		\item (Blei et al., 2003)
+	\end{itemize}
+	
+\end{frame}
+
+\begin{frame}{Coupled Topic Model Applications}
+	
+	\begin{itemize}
+		\item Gokhan lit survey
+	\end{itemize}
+	
+\end{frame}
+
+\begin{frame}{LDA $\equiv$ Bayesian NMF up to parameterization }
+	
+	\begin{itemize}
+		%TODO: comparison slide from blei
+		\item (Jordan Blei) (Cemgil, 2009)
+	\end{itemize}
+	
+\end{frame}
+
+
+
+\begin{frame}{Coupled Matrix Factorization for Recovering Topics}
+	
+	\begin{itemize}
+		% TODO: image from SIU paper
+		\item ...
+	\end{itemize}
+	
+\end{frame}
+
+\begin{frame}{Extended Coupled NMF for Topic Learning with Count Features}
+	
+	\begin{itemize}
+		% TODO: new image describing model
+		\item ...
+	\end{itemize}
+	
+\end{frame}
+
+
+\begin{frame}{Data Set and Features}
+	
+	\begin{itemize}
+		\item {\bf Data Set:} News articles sampled from Anadolu Agency website. 
+		%TODO: put dataset statistics here
+		\item {\bf Features:} Complexity features such as word count, sentence count, average sentence length, comma count.
+		\item {\bf Novel Features:} Etymological counts. Count the number of words from their etymological origins. Number of Arabic, Farsi, French words, etc.
+	\end{itemize}
+	
+\end{frame}
+
+\begin{frame}{Learning}
+	
+	\begin{itemize}
+		\item EM-like updates with multiplicative NMF update rules 
+		%TODO: cite Lee Seung 2001
+		\item (out of scope for this project) : Gibbs sampling
+	\end{itemize}
+	
+\end{frame}
+
+\begin{frame}{Conclusion}
+	
+	We propose several contributions
+	\begin{itemize}
+		\item Put the topic modeling problem in a coupled NMF framework, extending with numerical features
+		\item Use etymological counts for the Turkish language
+	\end{itemize}
+	
+\end{frame}
+
+\bibliography{zotero}{}
+\bibliographystyle{apalike}
+\end{document}

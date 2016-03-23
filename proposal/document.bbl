@@ -1,3 +1,27 @@
 \begin{thebibliography}{}
 
+\bibitem[Blei et~al., 2003]{blei_latent_2003}
+Blei, D.~M., Ng, A.~Y., Jordan, M.~I., and Lafferty, J. (2003).
+\newblock Latent dirichlet allocation.
+\newblock {\em Journal of Machine Learning Research}, 3:2003.
+
+\bibitem[Putthividhy et~al., 2010]{putthividhy_topic_2010}
+Putthividhy, D., Attias, H.~T., and Nagarajan, S.~S. (2010).
+\newblock Topic regression multi-modal latent dirichlet allocation for image
+  annotation.
+\newblock In {\em Computer {Vision} and {Pattern} {Recognition} ({CVPR}), 2010
+  {IEEE} {Conference} on}, pages 3408--3415. IEEE.
+
+\bibitem[Roller and Im~Walde, 2013]{roller_multimodal_2013}
+Roller, S. and Im~Walde, S.~S. (2013).
+\newblock A multimodal {LDA} model integrating textual, cognitive and visual
+  modalities.
+\newblock In {\em Proceedings of the 2013 {Conference} on {Empirical} {Methods}
+  in {Natural} {Language} {Processing}}, pages 1146--1157.
+
+\bibitem[Troelsgaard et~al., 2014]{troelsga_ard_topic_2014}
+Troelsgaard, R., Jensen, B.~S., and Hansen, L.~K. (2014).
+\newblock A {Topic} {Model} {Approach} to {Multi}-{Modal} {Similarity}.
+\newblock {\em arXiv preprint arXiv:1405.6886}.
+
 \end{thebibliography}

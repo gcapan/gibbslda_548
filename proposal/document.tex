@@ -15,11 +15,12 @@
 	\titlepage
 \end{frame}
 
-\begin{frame}{Introduction}
+\begin{frame}{Introduction: Topic Models}
 	
 	\begin{itemize}
-		\item Unsupervised learning, recover \emph{latent} topics in documents
-		\item Can be thought of as clustering. Loosely equivalent to link prediction.
+		\item {\em Unsupervised} learning, recover \emph{latent} topics in documents
+		\item Can be thought of as {\em clustering}.
+		\item {\bf Key Assumption:} Topics lead to distinct word distributions. Intuitive. 
 	\end{itemize}
 	
 \end{frame}
@@ -27,7 +28,9 @@
 \begin{frame}{Latent Dirichlet Allocation}
 	
 	\begin{itemize}
-		\item (Blei et al., 2003)
+		\item Rich, probabilistic mixed membership model due to (Blei et al., 2003)
+		\item Widely adopted and extended
+		\item {\bf Key Idea: } 
 	\end{itemize}
 	
 \end{frame}
@@ -41,7 +44,7 @@
 	
 \end{frame}
 
-\begin{frame}{Coupled Topic Model Applications}
+\begin{frame}{Some Examples of LDA Extensions}
 	
 	\begin{itemize}
 		\item Gokhan lit survey
@@ -49,46 +52,13 @@
 	
 \end{frame}
 
-\begin{frame}{LDA $\equiv$ Bayesian NMF up to parameterization }
+\begin{frame}{We will propose a simple extension to LDA for working with Count Features}
 	
 	\begin{itemize}
 		%TODO: comparison slide from blei
-		\item (Jordan Blei) (Cemgil, 2009)
-	\end{itemize}
-	
-\end{frame}
-
-
-
-\begin{frame}{Coupled Matrix Factorization for Recovering Topics}
-	
-	\begin{figure}[h]
-		\centering
-		\includegraphics[width=9cm]{images/nmf2.png}
-	\end{figure}
-	
-	\begin{itemize}
-		
-		\item Represent data with well-known algebraic structures
-		\item Jointly guide topic assignments from multimodal datasets, in a probabilistically sound framework
-		\item Easily extensible to semi-supervised learning, kernel methods
-		\item (T. and Cemgil, 2016)
-	\end{itemize}
-	
-\end{frame}
-
-\begin{frame}{Extended Coupled NMF for Topic Learning with Count Features}
-	
-	\begin{figure}[h]
-		\centering
-		\includegraphics[width=7cm]{images/ext_nmf.png}
-	\end{figure}
-	
-	\begin{itemize}
-		\item $ y_{ij} | W, H \sim GPO(\sum_{t} w_{it} h_{tj}, \phi) $
-		\item $ x_{kj} | V, H \sim GPO(\sum_{t} v_{kt} h_{tj}, \gamma) $
-		\item Guide topic modeling with numeric count data
-		\item Can assume priors $p(W), p(H), p(V)$ for Bayesian learning
+		\item Jointly model both word distributions and some count features in probabilistically sound framework
+		\item Can then easily extend to other distributions for numeric features
+		\item Close to the state of the art
 	\end{itemize}
 	
 \end{frame}
@@ -107,7 +77,7 @@
 \begin{frame}{Learning}
 	
 	\begin{itemize}
-		\item EM-like updates with multiplicative NMF update rules 
+		\item {\bf Variational inference: } Derive approximate inference algorithms based on a decoupling of the original model OR Variational EM-like procedures to find parameter estimates.
 		\item Gibbs sampling assuming appropriate priors (tentative, out of scope for this project)
 	\end{itemize}
 	
@@ -117,7 +87,7 @@
 	
 	We propose two key contributions
 	\begin{itemize}
-		\item Put the topic modeling problem in a coupled NMF framework, extending with numerical features
+		\item Put the topic modeling problem in an extended LDA framework, with numerical features
 		\item Use etymological counts for the Turkish language
 	\end{itemize}
 	

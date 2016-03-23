@@ -1,0 +1,5 @@
+1 - Topic regression multi-modal Latent Dirichlet Allocation for image annotation - http://www2.imm.dtu.dk/pubdb/views/edoc_download.php/6720/pdf/imm6720.pdf - CVPR 2010 - cited 83
+
+2- A Topic Model Approach to Multi-Modal Similarity - http://www2.imm.dtu.dk/pubdb/views/edoc_download.php/6720/pdf/imm6720.pdf - NIPS 2013 (Topic Modeling Workshop) - 
+
+3-A multimodal LDA model integrating textual, cognitive and visual modalities -  http://www.cs.utexas.edu/~ml/papers/roller.emnlp13.pdf - EMNLP 2013 (ACL/EMNLP)

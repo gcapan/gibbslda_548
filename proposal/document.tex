@@ -2,7 +2,13 @@
 
 \usepackage{amsmath}
 \usepackage{amsfonts}
-\usepackage{graphicx}
+
+\usepackage{graphics,graphicx,subfigure,color}
+
+\usepackage{tikz} % graphical models
+\usetikzlibrary{chains,fit,shapes}
+\usetikzlibrary{bayesnet}
+
 
 \mode<presentation>{}
 
@@ -21,32 +27,209 @@
 		\item Unsupervised learning, recover \emph{latent} topics in documents
 		\item Can be thought of as clustering. Loosely equivalent to link prediction.
 	\end{itemize}
-	
 \end{frame}
 
-\begin{frame}{Latent Dirichlet Allocation}
-	
+\begin{frame}{Latent Dirichlet Allocation}	
 	\begin{itemize}
-		\item (Blei et al., 2003)
+		\item Mixed Membership Model
+		\item Assumes a fixed number of topics in a corpus
+		\item Each document governs words from multiple topics (in contrast with clustering)
 	\end{itemize}
-	
 \end{frame}
 
-\begin{frame}{Comparison of Topic Models}
-	
+\begin{frame}{LDA - Generative Model}	
 	\begin{itemize}
-		%TODO: comparison slide from blei
-		\item (Blei et al., 2003)
+		\item For each document;
+		\begin{itemize}
+			\item Topic proportions vector is drawn ($\theta \sim Dirichlet(\alpha)$)
+			\item For each word in the document
+			\begin{itemize}
+				\item A topic is drawn from topic proportions ($z_i \sim Multinomial(\theta)$)
+				\item A word is drawn from topic ($w_i \sim Multinomial(\beta_{z_i})$)
+			\end{itemize}
+		\end{itemize}
 	\end{itemize}
-	
 \end{frame}
 
-\begin{frame}{Coupled Topic Model Applications}
-	
+\begin{frame}{LDA - Bayesian Network Representation}
+	\begin{tikzpicture}
+	  \node[latent] (z) {$z_i$} ; %
+	  \node[obs, right = of z] (w) {$w_i$};
+          \node[latent, left=of z] (theta) {$\theta$} ; %
+          \node[const, left=of theta](alpha){$\alpha$};
+          \node[latent, right=1.5 of w] (beta) {$\beta$};
+        
+          \edge {theta} {z} ; %
+          \edge {z} {w} ;
+          \edge {beta}{w} ;
+          \edge {alpha}{theta}
+          
+          \plate {words}{
+          	(z)
+		(w)
+	  }{$N_d$}
+	  
+          \plate {docs} {
+          	(theta)
+		(words)
+          }{$N$}
+          
+          \plate {topicwords}{
+          	(beta)
+	 }{$K$}
+    
+	\end{tikzpicture}
 	\begin{itemize}
-		\item Gokhan lit survey
+		\item Note the difference with document clustering ($z$ is outside of the plate in that case, each word of a document comes from a single cluster), which is referred to as \textit{mixture of unigrams}
 	\end{itemize}
+\end{frame}
+
+\begin{frame}{LDA - Multi Modal (Aspect) Variants}
+	\begin{itemize}
+		\item A topic generates not only words, but also other features
+		\item The features can be paired with words themselves
+		\item The topics can define other aspects
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{Multi-Modal LDA Variants}
+	\begin{figure}
+	\begin{tabular}{cc}
+	\begin{tikzpicture}
+	  \node[latent] (z) {$z_i$} ; %
+	  \node[latent, right = of z](z2) {$s_i$};
+	  
+	  \node[obs, below = of z] (w) {$w_i$};
+	  \node[obs, below = of z2](w2) {$f_i$};
+	  
+          \node[latent, above=of z] (theta) {$\theta$} ; %
+          \node[const, above=of theta](alpha){$\alpha$};
+          \node[latent, below=1.5 of w] (beta) {$\beta_w$};
+          \node[latent, below=1.5 of w2](beta2){$\beta_f$};
+        
+          \edge {theta} {z} ; %
+          \edge {theta}{z2} ;
+          \edge {z} {w} ;
+          \edge{z2}{w2} ;
+          \edge {beta}{w} ;
+          \edge {alpha}{theta} ;
+           \edge {beta2}{w2} ;
+          
+          \plate {words}{
+          	(z)
+		(w)
+	  }{$N_w$}
+	  
+	  \plate {wordsm}{
+          	(z2)
+		(w2)
+	  }{$N_f$}
+
+          \plate {docs} {
+          	(theta)
+		(words)
+		(wordsm)
+          }{$N$}
+          
+          \plate {topicwords}{
+          	(beta)
+	 }{$K$}
+	 
+	 \plate {topicwords2}{
+          	(beta2)
+	 }{$K$}
+
+	\end{tikzpicture}
 	
+	&\begin{tikzpicture}
+	  \node[latent] (z) {$z_i$} ; %
+	  \node[obs, below = of z] (w) {$w_i$};
+	  \node[obs, right = of w] (f) {$f_i$};
+          \node[latent, above=of z] (theta) {$\theta$} ; %
+          \node[const, above=of theta](alpha){$\alpha$};
+          \node[latent, below=1.5 of w] (beta) {$\beta$};
+          \node[latent, below=1.5 of f] (omega) {$\omega$};
+        
+          \edge {theta} {z} ; %
+          \edge {z} {w} ;
+          \edge {z} {f};
+          \edge {beta}{w} ;
+          \edge {omega}{f}
+          \edge {alpha}{theta};
+          
+          \plate {words}{
+          	(z)
+		(w)
+		(f)
+	  }{$N_d$}
+	  
+          \plate {docs} {
+          	(theta)
+		(words)
+          }{$N$}
+          
+          \plate {topicwords}{
+          	(beta)
+	 }{$K$}
+	\plate{topicfeatures}{
+	 	(omega)
+	}{$K$}
+	\end{tikzpicture}
+	\end{tabular}
+	\end{figure}
+
+\end{frame}
+
+\begin{frame}{Proposed Model}
+	\begin{itemize}
+		\item	We hypothesize that topics and etymological origins of words are related
+		\item Using a multi-modal LDA, we can understand the relationship
+	\end{itemize}
+\end{frame}
+
+\begin{frame}{A Tentative Approach}
+	\begin{tikzpicture}
+	  \node[latent] (z) {$z_i$} ; %
+	  %\node[latent, below=of z](z2) {$s_i$};
+	  
+	  \node[obs, right=of z] (w) {$w_i$};
+	  \node[obs, below=of z](w2){$C$};
+	  
+          \node[latent, left=of z] (theta) {$\theta$} ; %
+          \node[const, left=of theta](alpha){$\alpha$};
+          \node[latent, right=1.5 of w] (beta) {$\beta$};
+          \node[latent, below=of beta](lambda){$\lambda$};
+        
+          \edge {theta} {z} ; %
+          \edge {theta}{w2} ;
+          \edge {z} {w} ;
+          \edge {beta}{w} ;
+          \edge {alpha}{theta} ;
+           \edge {lambda}{w2} ;
+          
+          \plate {words}{
+          	(z)
+		(w)
+	  }{$N_w$}
+	  
+          \plate {docs} {
+          	(theta)
+		(words)
+		(wordsm)
+          }{$N$}
+          
+          \plate {topicwords}{
+          	(beta)
+	 }{$K$}
+	 
+	 \plate {topicwords2}{
+          	(lambda)
+	 }{$K$}
+	 
+	\end{tikzpicture}
+	\begin{itemize}
+		  \item Here, $C$ is an $|L|$ dimensional vector of Poisson random variables, where $L$ is the set of etymological origins
+	\end{itemize}
 \end{frame}
 
 \begin{frame}{LDA $\equiv$ Bayesian NMF up to parameterization }

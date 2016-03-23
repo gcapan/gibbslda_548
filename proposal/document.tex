@@ -33,7 +33,7 @@
 	\begin{itemize}
 		\item Mixed Membership Model
 		\item Assumes a fixed number of topics in a corpus
-		\item Each document governs words from multiple topics (in contrast with clustering)
+		\item A document includes words from multiple topics (in contrast with clustering)
 	\end{itemize}
 \end{frame}
 
@@ -45,7 +45,7 @@
 			\item For each word in the document
 			\begin{itemize}
 				\item A topic is drawn from topic proportions ($z_i \sim Multinomial(\theta)$)
-				\item A word is drawn from topic ($w_i \sim Multinomial(\beta_{z_i})$)
+				\item The word is drawn from topic ($w_i \sim Multinomial(\beta_{z_i})$)
 			\end{itemize}
 		\end{itemize}
 	\end{itemize}
@@ -86,9 +86,9 @@
 
 \begin{frame}{LDA - Multi Modal (Aspect) Variants}
 	\begin{itemize}
-		\item A topic generates not only words, but also other features
-		\item The features can be paired with words themselves
-		\item The topics can define other aspects
+		\item A topic generates not only words, but also other modalities
+		\item The features can be paired with words themselves (for word sense, for example)
+		\item The topics can generate other aspects
 	\end{itemize}
 \end{frame}
 
@@ -230,15 +230,6 @@
 	\begin{itemize}
 		  \item Here, $C$ is an $|L|$ dimensional vector of Poisson random variables, where $L$ is the set of etymological origins
 	\end{itemize}
-\end{frame}
-
-\begin{frame}{LDA $\equiv$ Bayesian NMF up to parameterization }
-	
-	\begin{itemize}
-		%TODO: comparison slide from blei
-		\item (Jordan Blei) (Cemgil, 2009)
-	\end{itemize}
-	
 \end{frame}
 
 

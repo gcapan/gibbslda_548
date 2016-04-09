@@ -4,3 +4,7 @@
 *.nav
 *.synctex.gz
 *~
+*.bbl
+*.blg
+.idea/
+.ipynb_checkpoints/

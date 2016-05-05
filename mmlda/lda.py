@@ -12,8 +12,6 @@ import scipy.special as spec
 
 from _lda_helpers import mean_change_2d, mean_change
 
-from _lda_helpers import mean_change_2d
-
 class LDA(object):
 
     def __init__(self, K=5, alpha=None):
@@ -56,38 +54,7 @@ class LDA(object):
 
             for m in xrange(M):  # iterate over all documents
 
-                ixw = X[m, :].nonzero()[1]  # an index to words which have appeared in the document
-                phi = np.zeros((K, len(ixw)), dtype=float) + 1./K  # only appearing words get a phi
-
-                # slice for the document only once
-                gammad = gamma[:, m]
-                beta_ixw_T = (beta[:, ixw]).T
-
-                # store the previous values for convergence check
-                phi_prev = phi.copy()
-                gammad_prev = gammad.copy()
-
-                for ctr in xrange(200):
-                    # update phi
-                    # WARN: exp digamma underflows < 1e-3!
-                    phi = (beta_ixw_T * np.exp(spec.digamma(gammad))).T
-                    phi /= np.sum(phi, 0)  # normalize phi columns
-
-                    # update gamma
-                    gammad = alpha + np.sum(phi, axis=1)
-
-                    if ctr % 20 == 0:  #check convergence
-                        dphinorm = mean_change_2d(phi, phi_prev)
-                        dgammadnorm = mean_change(gammad, gammad_prev)
-
-                        # print dphinorm, dgammadnorm
-
-                        phi_prev = phi.copy()
-                        gammad_prev = gammad.copy()
-
-                        if dphinorm < 1e-1 and dgammadnorm < 1e-1:
-                        # if dgammadnorm < .01:
-                            break
+                gammad, phi, ixw = self._doc_update(m, X, K, gamma, beta, alpha)
 
                 # if m > 5:
                 #     break
@@ -100,6 +67,48 @@ class LDA(object):
             beta = self._m_step(beta_acc)
 
         return (beta, gamma) # the parameters learned
+
+    def _doc_update(self, m, X, K, gamma, beta, alpha):
+        """
+        Take an E update step for a document
+
+        :param m: the index to the document
+        :return:
+        """
+        ixw = X[m, :].nonzero()[1]  # an index to words which have appeared in the document
+        phi = np.zeros((K, len(ixw)), dtype=float) + 1./K  # only appearing words get a phi
+
+        # slice for the document only once
+        gammad = gamma[:, m]
+        beta_ixw_T = (beta[:, ixw]).T
+
+        # store the previous values for convergence check
+        phi_prev = phi.copy()
+        gammad_prev = gammad.copy()
+
+        for ctr in xrange(200):
+            # update phi
+            # WARN: exp digamma underflows < 1e-3!
+            phi = (beta_ixw_T * np.exp(spec.digamma(gammad))).T
+            phi /= np.sum(phi, 0)  # normalize phi columns
+
+            # update gamma
+            gammad = alpha + np.sum(phi, axis=1)
+
+            if ctr % 20 == 0:  #check convergence
+                dphinorm = mean_change_2d(phi, phi_prev)
+                dgammadnorm = mean_change(gammad, gammad_prev)
+
+                # print dphinorm, dgammadnorm
+
+                phi_prev = phi.copy()
+                gammad_prev = gammad.copy()
+
+                if dphinorm < 1e-1 and dgammadnorm < 1e-1:
+                # if dgammadnorm < .01:
+                    break
+
+        return gammad, phi, ixw
 
     def _m_step(self, beta_acc):
         """

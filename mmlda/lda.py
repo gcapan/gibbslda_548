@@ -75,7 +75,9 @@ class LDA(object):
         :param m: the index to the document
         :return:
         """
-        ixw = X[m, :].nonzero()[1]  # an index to words which have appeared in the document
+        #ixw = X[m, :].nonzero()[1]  # an index to words which have appeared in the document
+        ixw = X.indices[X.indptr[m]:X.indptr[m+1]]  # index optimized for sparse matrices
+        
         phi = np.zeros((K, len(ixw)), dtype=float) + 1./K  # only appearing words get a phi
 
         # slice for the document only once

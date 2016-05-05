@@ -10,9 +10,10 @@ topic proportions
 import numpy as np
 import scipy.special as spec
 
+
 class LDA(object):
 
-    def __init__(self, K=5, alpha=.1):
+    def __init__(self, K=5, alpha=None):
         """
 
         :param K: the number of topics
@@ -20,6 +21,8 @@ class LDA(object):
         :return:
         """
         self.alpha = alpha
+        if self.alpha is None:
+            self.alpha = 1./K
         self.K = K
 
     def fit(self, X):
@@ -40,6 +43,9 @@ class LDA(object):
         # model parameters
         beta = np.random.rand(K, V)
 
+        # memoize how to init phi
+        phi_init = np.zeros((K, V), dtype=float) + 1./K
+
         for epoch in range(30):
             # E-step
 
@@ -48,30 +54,30 @@ class LDA(object):
 
             for m in range(M):  # iterate over all documents
 
-                phi = np.zeros((K, V), dtype=float) + 1./K
-                ixw = (X[m, :] > 0).toarray().squeeze()  # an index to words which have appeared in the document
+                phi = phi_init.copy()
+                ixw = X[m, :].nonzero()[1]  # an index to words which have appeared in the document
 
                 gammad = gamma[:, m]  # slice for the document only once
 
                 for ctr in range(int(1000)):
                     # store the previous values
-                    # TODO: make this more efficient
-                    phi_prev = phi.copy()
+                    phi_prev = phi[:, ixw].copy()
                     gammad_prev = gammad.copy()
 
                     # update phi
                     # WARN: exp digamma underflows < 1e-3!
                     phi[:, ixw] = ((beta[:, ixw]).T * np.exp(spec.digamma(gammad))).T
-                    phi = phi / np.sum(phi, 0)  # normalize phi columns
+                    phi[:, ixw] /= np.sum(phi[:, ixw], 0)  # normalize phi columns
 
                     # update gamma
                     gammad = alpha + np.sum(phi, axis=1)
 
                     # check for convergence
-                    dphinorm = np.linalg.norm(phi - phi_prev, "fro")
+                    dphinorm = np.linalg.norm(phi[:, ixw] - phi_prev, "fro")
                     dgammadnorm = np.linalg.norm(gammad - gammad_prev)
 
                     if dphinorm < .01 and dgammadnorm < .01:
+                    # if dgammadnorm < .01:
                         break
 
                 gamma[:, m] = gammad
@@ -90,3 +96,10 @@ class LDA(object):
         :return: normalized betas
         """
         return (beta_acc.T / np.sum(beta_acc, axis=1)).T # normalize beta rows
+
+    def _bound(self):
+        """
+        TODO: Calculate the lower bound function to check convergence
+        :return:
+        """
+        pass

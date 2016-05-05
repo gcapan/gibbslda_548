@@ -8,3 +8,4 @@
 *.blg
 .idea/
 .ipynb_checkpoints/
+*.pyc

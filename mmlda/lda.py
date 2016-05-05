@@ -12,6 +12,17 @@ import scipy.special as spec
 
 from _lda_helpers import mean_change_2d, mean_change
 
+
+def get_slices(n, n_buckets):
+    bucket = n // n_buckets
+    slices = []
+    for i in range(n_buckets):
+        if i < n_buckets - 1:
+            slices.append(slice(i*bucket, (i+1)*bucket))
+        else:
+            slices.append(slice(i*bucket, None))
+
+
 class LDA(object):
 
     def __init__(self, K=5, alpha=None):

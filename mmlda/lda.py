@@ -10,6 +10,9 @@ topic proportions
 import numpy as np
 import scipy.special as spec
 
+from _lda_helpers import mean_change_2d, mean_change
+
+from _lda_helpers import mean_change_2d
 
 class LDA(object):
 
@@ -43,45 +46,54 @@ class LDA(object):
         # model parameters
         beta = np.random.rand(K, V)
 
-        # memoize how to init phi
-        phi_init = np.zeros((K, V), dtype=float) + 1./K
-
-        for epoch in range(30):
+        for epoch in xrange(10):
             # E-step
+
+            print "Epoch:", epoch
 
             gamma = np.zeros((K, M)) + alpha + (nr_terms/float(K)) # mth document, i th topic
             beta_acc = np.zeros((K, V))
 
-            for m in range(M):  # iterate over all documents
+            for m in xrange(M):  # iterate over all documents
 
-                phi = phi_init.copy()
                 ixw = X[m, :].nonzero()[1]  # an index to words which have appeared in the document
+                phi = np.zeros((K, len(ixw)), dtype=float) + 1./K  # only appearing words get a phi
 
-                gammad = gamma[:, m]  # slice for the document only once
+                # slice for the document only once
+                gammad = gamma[:, m]
+                beta_ixw_T = (beta[:, ixw]).T
 
-                for ctr in range(int(1000)):
-                    # store the previous values
-                    phi_prev = phi[:, ixw].copy()
-                    gammad_prev = gammad.copy()
+                # store the previous values for convergence check
+                phi_prev = phi.copy()
+                gammad_prev = gammad.copy()
 
+                for ctr in xrange(200):
                     # update phi
                     # WARN: exp digamma underflows < 1e-3!
-                    phi[:, ixw] = ((beta[:, ixw]).T * np.exp(spec.digamma(gammad))).T
-                    phi[:, ixw] /= np.sum(phi[:, ixw], 0)  # normalize phi columns
+                    phi = (beta_ixw_T * np.exp(spec.digamma(gammad))).T
+                    phi /= np.sum(phi, 0)  # normalize phi columns
 
                     # update gamma
                     gammad = alpha + np.sum(phi, axis=1)
 
-                    # check for convergence
-                    dphinorm = np.linalg.norm(phi[:, ixw] - phi_prev, "fro")
-                    dgammadnorm = np.linalg.norm(gammad - gammad_prev)
+                    if ctr % 20 == 0:  #check convergence
+                        dphinorm = mean_change_2d(phi, phi_prev)
+                        dgammadnorm = mean_change(gammad, gammad_prev)
 
-                    if dphinorm < .01 and dgammadnorm < .01:
-                    # if dgammadnorm < .01:
-                        break
+                        # print dphinorm, dgammadnorm
+
+                        phi_prev = phi.copy()
+                        gammad_prev = gammad.copy()
+
+                        if dphinorm < 1e-1 and dgammadnorm < 1e-1:
+                        # if dgammadnorm < .01:
+                            break
+
+                # if m > 5:
+                #     break
 
                 gamma[:, m] = gammad
-                beta_acc[:, ixw] += phi[:, ixw]
+                beta_acc[:, ixw] += phi
 
             # M-step
             # TODO: check for numerical stability

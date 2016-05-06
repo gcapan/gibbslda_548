@@ -21,7 +21,7 @@ def get_slices(n, n_buckets):
             slices.append(slice(i*bucket, (i+1)*bucket))
         else:
             slices.append(slice(i*bucket, None))
-
+    return slices
 
 class LDA(object):
 
@@ -67,9 +67,6 @@ class LDA(object):
 
                 gammad, phi, ixw = self._doc_update(m, X, K, gamma, beta, alpha)
 
-                # if m > 5:
-                #     break
-
                 gamma[:, m] = gammad
                 beta_acc[:, ixw] += phi
 
@@ -78,6 +75,20 @@ class LDA(object):
             beta = self._m_step(beta_acc)
 
         return (beta, gamma) # the parameters learned
+
+    def _slice_doc_update(self, X, K, gamma, beta, alpha, slice):
+        """
+        
+        :param Xsl: X 
+        :param K: number of topics
+        :param gamma: 
+        :param beta: 
+        :param alpha: 
+        :param slice: the slice itself
+        :return: 
+        """
+        # TODO: partition X into 2-3 cores and parallelize
+        pass
 
     def _doc_update(self, m, X, K, gamma, beta, alpha):
         """
@@ -136,4 +147,6 @@ class LDA(object):
         TODO: Calculate the lower bound function to check convergence
         :return:
         """
+        # TODO: implement bound function
+        # TODO: implement perplexity
         pass

@@ -71,16 +71,3 @@ def gamma_update(np.ndarray[ndim=1, dtype=np.float64_t] alpha,
         sum[i] = temp_sum
 
     return sum[i]
-
-# @cython.boundscheck(False)
-# @cython.wraparound(False)
-# def psi_sumpsi(np.ndarray[ndim=1, dtype=np.float64_t] gammad,
-#                np.ndarray[ndim=1, dtype=np.float64_t] out):
-#
-#     cdef np.npy_intp i, n
-#     cdef np.float64_t total
-#
-#     n = gammad.shape[0]
-#
-#     for i in range(n):
-#         total += gammad[i]

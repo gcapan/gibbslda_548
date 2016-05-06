@@ -11,6 +11,7 @@ import numpy as np
 import scipy.special as spec
 
 from _lda_helpers import mean_change_2d, mean_change
+from joblib import Parallel, delayed
 
 
 def get_slices(n, n_buckets):
@@ -23,81 +24,43 @@ def get_slices(n, n_buckets):
             slices.append(slice(i*bucket, None))
     return slices
 
-class LDA(object):
 
-    def __init__(self, K=5, alpha=None):
-        """
-
-        :param K: the number of topics
-        :param alpha: is the hyperparameter to the model, this implementation assumes an exchangeable Dirichlet
-        :return:
-        """
-        self.alpha = alpha
-        if self.alpha is None:
-            self.alpha = 1./K
-        self.K = K
-
-    def fit(self, X):
-        """
-
-        :param X: the term-document matrix, of type (n_documents, n_terms)
-        :type X: scipy.sparse.csr_matrix
-        :return:
-        """
-
-        K = self.K # number of topics
-        alpha = self.alpha
-        M, V = X.shape
-
-        nr_terms = X.sum(axis=1)
-        nr_terms = np.array(nr_terms).squeeze()
-
-        # model parameters
-        beta = np.random.rand(K, V)
-
-        for epoch in xrange(10):
-            # E-step
-
-            print "Epoch:", epoch
-
-            gamma = np.zeros((K, M)) + alpha + (nr_terms/float(K)) # mth document, i th topic
-            beta_acc = np.zeros((K, V))
-
-            for m in xrange(M):  # iterate over all documents
-
-                gammad, phi, ixw = self._doc_update(m, X, K, gamma, beta, alpha)
-
-                gamma[:, m] = gammad
-                beta_acc[:, ixw] += phi
-
-            # M-step
-            # TODO: check for numerical stability
-            beta = self._m_step(beta_acc)
-
-        return (beta, gamma) # the parameters learned
-
-    def _slice_doc_update(self, X, K, gamma, beta, alpha, slice):
-        """
+def _slice_doc_update(X, K, gamma, beta, alpha, slice):
+    """
+    
+    :param Xsl: X 
+    :param K: number of topics
+    :param gamma: 
+    :param beta: 
+    :param alpha: 
+    :param slice: the slice itself
+    :return: 
+    """
+    # TODO: partition X into 2-3 cores and parallelize
+    
+    Xsl = X[slice, :]
+    
+    sl_length, V = Xsl.shape  # grab slice length 
+    
+    _loc_beta = np.zeros(beta.shape)  # get a local beta
+    _loc_gamma = gamma[:, slice]  # get local gamma
+    
+    for m in xrange(sl_length):
+        gammad, phi, ixw = _doc_update(m, Xsl, K, gamma, beta, alpha)
         
-        :param Xsl: X 
-        :param K: number of topics
-        :param gamma: 
-        :param beta: 
-        :param alpha: 
-        :param slice: the slice itself
-        :return: 
-        """
-        # TODO: partition X into 2-3 cores and parallelize
-        pass
+        _loc_gamma[:, m] = gammad
+        _loc_beta[:, ixw] = phi
+        
+    return _loc_beta, _loc_gamma
 
-    def _doc_update(self, m, X, K, gamma, beta, alpha):
+
+def _doc_update(m, X, K, gamma, beta, alpha):
         """
         Take an E update step for a document
 
         :param m: the index to the document
         :return:
         """
-        #ixw = X[m, :].nonzero()[1]  # an index to words which have appeared in the document
         ixw = X.indices[X.indptr[m]:X.indptr[m+1]]  # index optimized for sparse matrices
         
         phi = np.zeros((K, len(ixw)), dtype=float) + 1./K  # only appearing words get a phi
@@ -133,6 +96,76 @@ class LDA(object):
                     break
 
         return gammad, phi, ixw
+
+
+class LDA(object):
+
+    def __init__(self, K=5, alpha=None, n_jobs=3):
+        """
+
+        :param K: the number of topics
+        :param alpha: is the hyperparameter to the model, this implementation assumes an exchangeable Dirichlet
+        :param n_jobs: how many CPUs?
+        :return:
+        """
+        self.alpha = alpha
+        if self.alpha is None:
+            self.alpha = 1./K
+        self.K = K
+        
+        self.n_jobs = n_jobs
+
+    def fit(self, X):
+        """
+
+        :param X: the term-document matrix, of type (n_documents, n_terms)
+        :type X: scipy.sparse.csr_matrix
+        :return:
+        """
+
+        K = self.K # number of topics
+        alpha = self.alpha
+        M, V = X.shape
+
+        nr_terms = X.sum(axis=1)
+        nr_terms = np.array(nr_terms).squeeze()
+
+        # model parameters
+        beta = np.random.rand(K, V)
+        
+        # initialize the parallel processing pool
+        par = Parallel(n_jobs=self.n_jobs, backend="multiprocessing")
+        
+        # slice the documents for multiprocessing
+        slices = get_slices(M, self.n_jobs)
+
+        for epoch in xrange(10):
+            # E-step
+
+            print "Epoch:", epoch
+            
+            # initialize variables
+            gamma = np.zeros((K, M)) + alpha + (nr_terms/float(K)) # mth document, i th topic
+            beta_acc = np.zeros((K, V))
+            
+            # work on each slice in parallel
+            res = par(delayed(_slice_doc_update)(X, K, gamma, beta, alpha, slice) for slice in slices)
+            
+            # res = []
+            # # DEBUG: instead work in series
+            # for i in range(len(slices)):
+            #     res.append(_doc_update()
+            
+            # sync barrier
+            for ix, r in enumerate(res):
+                gamma[:, slices[ix]] = r[1]  # update gammas
+                beta_acc += r[0]  # update betas
+
+            # M-step
+            # TODO: check for numerical stability
+            beta = self._m_step(beta_acc)
+
+        return (beta, gamma) # the parameters learned
 
     def _m_step(self, beta_acc):
         """

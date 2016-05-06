@@ -49,7 +49,7 @@ def _slice_doc_update(X, K, gamma, beta, alpha, slice):
         gammad, phi, ixw = _doc_update(m, Xsl, K, gamma, beta, alpha)
         
         _loc_gamma[:, m] = gammad
-        _loc_beta[:, ixw] = phi
+        _loc_beta[:, ixw] += phi
         
     return _loc_beta, _loc_gamma
 

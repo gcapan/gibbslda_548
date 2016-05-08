@@ -84,14 +84,15 @@ def _slice_doc_update(X, gamma, beta, alpha, slice):
     
     _loc_beta = np.zeros(beta.shape)  # get a local beta
     _loc_gamma = gamma[:, slice]  # get local gamma
-    
+    _loc_bound = 0
+
     for m in xrange(sl_length):
-        gammad, phi, ixw = _doc_update(m, Xsl, gamma, beta, alpha)
+        bound, gammad, phi, ixw = _doc_update(m, Xsl, gamma, beta, alpha)
         
         _loc_gamma[:, m] = gammad  # assignment by reference!!
         _loc_beta[:, ixw] += phi * Xsl[m, ixw].A
-        
-    return _loc_beta, _loc_gamma
+        _loc_bound += bound
+    return _loc_beta, _loc_gamma, _loc_bound
 
 
 def _doc_update(m, X, gamma, beta, alpha):
@@ -130,10 +131,13 @@ def _doc_update(m, X, gamma, beta, alpha):
     # slice for the document only once
     gammad = gamma[:, m]
     beta_ixw_T = beta[:, ixw].T
+    beta_ixw = beta[:, ixw]
 
     # store the previous values for convergence check
     phi_prev = phi.copy()
     gammad_prev = gammad.copy()
+    bound = -float("inf")
+    bound_prev = -float("inf")
 
     for ctr in xrange(200):
         # update phi
@@ -149,16 +153,28 @@ def _doc_update(m, X, gamma, beta, alpha):
             dphinorm = mean_change_2d(phi, phi_prev)
             dgammadnorm = mean_change(gammad, gammad_prev)
 
+            tmp = (spec.digamma(gammad) - np.sum(spec.digamma(gammad)))
+
+            e_of_log_theta = spec.loggama(np.sum(alpha)) - np.sum(spec.loggama(alpha)) + np.sum((alpha - 1) * tmp)
+            e_of_log_z = np.sum(phi * tmp)
+            e_of_log_beta = phi * beta_ixw
+            h_of_q_theta = spec.loggama(np.sum(gamma)) - np.sum(spec.loggama(gamma)) + np.sum((gamma - 1) * tmp)
+            h_of_q_z = np.sum(phi * np.log(phi))
+
+            bound = e_of_log_theta + e_of_log_z + e_of_log_beta - h_of_q_theta - h_of_q_z
+
             # print dphinorm, dgammadnorm
+            print bound
 
             phi_prev = phi.copy()
             gammad_prev = gammad.copy()
+            bound_prev = bound
             
             # TODO: 1e-1 too high for convergence
             if dphinorm < 1e-1 and dgammadnorm < 1e-1:
                 break
 
-    return gammad, phi, ixw
+    return bound, gammad, phi, ixw
 
 
 class LDA(object):
@@ -194,7 +210,7 @@ class LDA(object):
         :return: beta: the fitted topic-term distribution (n_topics, n_terms)
                  gamma: the fitted var. Dir prior (n_topics, n_documents)
         """
-
+        bound = 0
         K = self.K # number of topics
         alpha = self.alpha
         M, V = X.shape
@@ -231,6 +247,7 @@ class LDA(object):
             for ix, r in enumerate(res):
                 gamma[:, slices[ix]] = r[1]  # update gammas
                 beta_acc += r[0]  # update betas
+                bound += r[2]
 
             # M-step
             beta = self._m_step(beta_acc)
@@ -254,5 +271,8 @@ class LDA(object):
         :return:
         """
         # TODO: implement bound function
+        # Per document, the bound includes two phi terms, which are really scalars.
+        #
+
         # TODO: implement perplexity
         pass

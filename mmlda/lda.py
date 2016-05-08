@@ -155,16 +155,17 @@ def _doc_update(m, X, gamma, beta, alpha):
 
             tmp = (spec.digamma(gammad) - np.sum(spec.digamma(gammad)))
 
-            e_of_log_theta = spec.loggama(np.sum(alpha)) - np.sum(spec.loggama(alpha)) + np.sum((alpha - 1) * tmp)
-            e_of_log_z = np.sum(phi * tmp)
-            e_of_log_beta = phi * beta_ixw
-            h_of_q_theta = spec.loggama(np.sum(gamma)) - np.sum(spec.loggama(gamma)) + np.sum((gamma - 1) * tmp)
+            e_of_log_theta = np.log(spec.gamma(np.sum(alpha))) - \
+                             np.sum(np.log(spec.gamma(alpha))) + np.sum((alpha - 1) * tmp)
+            e_of_log_z = np.sum(phi.T * tmp)
+            e_of_log_beta = np.sum(phi * beta_ixw)
+            h_of_q_theta = np.log(spec.gamma(np.sum(gammad))) - np.sum(np.log(spec.gamma(gammad))) + \
+                           np.sum((gammad - 1) * tmp)
             h_of_q_z = np.sum(phi * np.log(phi))
 
             bound = e_of_log_theta + e_of_log_z + e_of_log_beta - h_of_q_theta - h_of_q_z
 
             # print dphinorm, dgammadnorm
-            print bound
 
             phi_prev = phi.copy()
             gammad_prev = gammad.copy()
@@ -173,7 +174,6 @@ def _doc_update(m, X, gamma, beta, alpha):
             # TODO: 1e-1 too high for convergence
             if dphinorm < 1e-1 and dgammadnorm < 1e-1:
                 break
-
     return bound, gammad, phi, ixw
 
 
@@ -256,7 +256,9 @@ class LDA(object):
             # quality - p(w) is the normalizing constant of the posterior
             # and it is intractable - bound gives an estimate
             perplexity = self._perplexity(X, bound)
+            print perplexity
 
+        print
         return beta, gamma # the parameters learned
 
     def _m_step(self, beta_acc):

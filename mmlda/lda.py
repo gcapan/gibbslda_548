@@ -9,6 +9,8 @@ topic proportions
 
 import numpy as np
 import scipy.special as spec
+import scipy.stats as stats
+from scipy.misc import logsumexp
 
 from _lda_helpers import mean_change_2d, mean_change
 from joblib import Parallel, delayed
@@ -95,6 +97,20 @@ def _slice_doc_update(X, gamma, beta, alpha, slice):
     return _loc_beta, _loc_gamma, _loc_bound
 
 
+def _doc_lowerbound(phi, gamma, beta, alpha):
+    tmp = (spec.digamma(gamma) - spec.digamma(np.sum(gamma)))
+    mean_log_ptheta = np.log(spec.gamma(np.sum(alpha))) - \
+                      np.sum(np.log(spec.gamma(alpha))) +\
+                      np.sum((alpha - 1) * tmp)
+    mean_log_pz = np.sum(phi.T * tmp)
+    mean_log_pw = np.sum(phi * np.log(beta))
+    neg_mean_log_qtheta = stats.dirichlet.entropy(gamma)
+    neg_mean_log_qz = - np.sum(phi * np.log(phi))
+
+    bound = mean_log_ptheta + mean_log_pz + mean_log_pw + neg_mean_log_qtheta + neg_mean_log_qz
+
+    return bound
+
 def _doc_update(m, X, gamma, beta, alpha):
     """
     Take an E update step for a document. Runs the variational inference iteration
@@ -137,7 +153,7 @@ def _doc_update(m, X, gamma, beta, alpha):
     phi_prev = phi.copy()
     gammad_prev = gammad.copy()
     bound = -float("inf")
-    bound_prev = -float("inf")
+    bound_prev = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
 
     for ctr in xrange(200):
         # update phi
@@ -152,29 +168,21 @@ def _doc_update(m, X, gamma, beta, alpha):
         if ctr % 20 == 0:  # check convergence
             dphinorm = mean_change_2d(phi, phi_prev)
             dgammadnorm = mean_change(gammad, gammad_prev)
-
-            tmp = (spec.digamma(gammad) - np.sum(spec.digamma(gammad)))
-
-            # TODO: how to log_sum_gamma?
-            e_of_log_theta = np.log(spec.gamma(np.sum(alpha))) - \
-                             np.sum(np.log(spec.gamma(alpha))) + np.sum((alpha - 1) * tmp)
-            e_of_log_z = np.sum(phi.T * tmp)
-            e_of_log_beta = np.sum(phi * beta_ixw)
-            h_of_q_theta = np.log(spec.gamma(np.sum(gammad))) - np.sum(np.log(spec.gamma(gammad))) + \
-                           np.sum((gammad - 1) * tmp)
-            h_of_q_z = np.sum(phi * np.log(phi))
-
-            bound = e_of_log_theta + e_of_log_z + e_of_log_beta - h_of_q_theta - h_of_q_z
+            bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
 
             # print dphinorm, dgammadnorm
-
             phi_prev = phi.copy()
             gammad_prev = gammad.copy()
             bound_prev = bound
-            
+
             # TODO: 1e-1 too high for convergence
             if dphinorm < 1e-1 and dgammadnorm < 1e-1:
                 break
+
+            # TODO: if bound_prev < bound, something is wrong
+            # TODO: check convergence
+
+    bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
     return bound, gammad, phi, ixw
 
 
@@ -243,7 +251,7 @@ class LDA(object):
             res = par(delayed(_slice_doc_update)(X, gamma, beta, alpha, slice) for slice in slices)
             
             # do things in series - for profiling purposes
-            # res = [_slice_doc_update(X, K, gamma, beta, alpha, slice) for slice in slices]
+            # res = [_slice_doc_update(X, gamma, beta, alpha, slice) for slice in slices]
 
             # sync barrier
             for ix, r in enumerate(res):
@@ -257,7 +265,7 @@ class LDA(object):
             # quality - p(w) is the normalizing constant of the posterior
             # and it is intractable - bound gives an estimate
             perplexity = self._perplexity(X, bound)
-            print perplexity
+            print "Perplexity:", perplexity
 
         print
         return beta, gamma # the parameters learned

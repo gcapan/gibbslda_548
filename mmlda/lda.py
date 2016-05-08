@@ -155,6 +155,7 @@ def _doc_update(m, X, gamma, beta, alpha):
 
             tmp = (spec.digamma(gammad) - np.sum(spec.digamma(gammad)))
 
+            # TODO: how to log_sum_gamma?
             e_of_log_theta = np.log(spec.gamma(np.sum(alpha))) - \
                              np.sum(np.log(spec.gamma(alpha))) + np.sum((alpha - 1) * tmp)
             e_of_log_z = np.sum(phi.T * tmp)

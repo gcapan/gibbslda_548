@@ -277,5 +277,4 @@ class LDA(object):
         TODO: Calculate the lower bound function to check convergence
         :return:
         """
-        return np.exp(-log_w/np.sum(X))
-        pass
+        return np.exp(-log_w/X.sum())

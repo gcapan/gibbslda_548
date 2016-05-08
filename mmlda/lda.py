@@ -211,6 +211,7 @@ class LDA(object):
                  gamma: the fitted var. Dir prior (n_topics, n_documents)
         """
         bound = 0
+        perplexity = float("inf")
         K = self.K # number of topics
         alpha = self.alpha
         M, V = X.shape
@@ -252,6 +253,10 @@ class LDA(object):
             # M-step
             beta = self._m_step(beta_acc)
 
+            # quality - p(w) is the normalizing constant of the posterior
+            # and it is intractable - bound gives an estimate
+            perplexity = self._perplexity(X, bound)
+
         return beta, gamma # the parameters learned
 
     def _m_step(self, beta_acc):
@@ -265,14 +270,10 @@ class LDA(object):
         return (beta_acc.T / np.sum(beta_acc, axis=1)).T # normalize beta rows
 
 
-    def _bound(self):
+    def _perplexity(self, X, log_w):
         """
         TODO: Calculate the lower bound function to check convergence
         :return:
         """
-        # TODO: implement bound function
-        # Per document, the bound includes two phi terms, which are really scalars.
-        #
-
-        # TODO: implement perplexity
+        return np.exp(-log_w/np.sum(X))
         pass

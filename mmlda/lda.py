@@ -85,15 +85,19 @@ def _slice_doc_update(X, gamma, beta, alpha, slice):
     sl_length, V = Xsl.shape  # grab slice length 
     
     _loc_beta = np.zeros(beta.shape)  # get a local beta
-    _loc_gamma = gamma[:, slice]  # get local gamma
+    _loc_gamma = gamma[:, slice]  # get local gamma slice
     _loc_bound = 0
 
     for m in xrange(sl_length):
-        bound, gammad, phi, ixw = _doc_update(m, Xsl, gamma, beta, alpha)
+        # an index to the words of this document is generated
+        ixw = Xsl.indices[Xsl.indptr[m]:Xsl.indptr[m+1]]  # index optimized for sparse matrices
+        
+        bound, gammad, phi = _doc_update(ixw,  _loc_gamma[:, m], beta, alpha)
         
         _loc_gamma[:, m] = gammad  # assignment by reference!!
         _loc_beta[:, ixw] += phi * Xsl[m, ixw].A
         _loc_bound += bound
+    
     return _loc_beta, _loc_gamma, _loc_bound
 
 
@@ -111,19 +115,16 @@ def _doc_lowerbound(phi, gamma, beta, alpha):
 
     return bound
 
-def _doc_update(m, X, gamma, beta, alpha):
+def _doc_update(ixw, gammad, beta, alpha):
     """
     Take an E update step for a document. Runs the variational inference iteration
     per document until convergence or maxiter of 200 is reached. 
 
-    :type m: int
-    :param m: the index to the document in the referring slice.
+    :type ixw: numpy.array
+    :param ixw: the index to the words appearing in the document
     
-    :type X: scipy.sparse.csr_matrix
-    :param X: the slice of the matrix that we will work on
-    
-    :type gamma: numpy.array
-    :param gamma: current assignment gamma, the var. Dir. prior (n_topics, n_documents)
+    :type gammad: numpy.array
+    :param gammad: current assignment to this document's gamma, the var. Dir. prior (n_topics, n_documents)
     
     :type beta: numpy.array
     :param beta: current assignment to beta, the topic-word distribution (n_topics, n_words)
@@ -137,21 +138,23 @@ def _doc_update(m, X, gamma, beta, alpha):
              ixw: index to the words appearing in this document (array of ints)
     """
     # TODO: this method should see only what it should see!
-    K, _ = gamma.shape
+    K = len(gammad)
     
     # index to the words appearing in the document
-    ixw = X.indices[X.indptr[m]:X.indptr[m+1]]  # index optimized for sparse matrices
+    # ixw = X.indices[X.indptr[m]:X.indptr[m+1]]  # index optimized for sparse matrices
     
     phi = np.zeros((K, len(ixw)), dtype=float) + 1./K  # only appearing words get a phi
 
     # slice for the document only once
-    gammad = gamma[:, m]
+    # gammad = gamma[:, m]
     beta_ixw_T = beta[:, ixw].T
     beta_ixw = beta[:, ixw]
 
     # store the previous values for convergence check
     phi_prev = phi.copy()
     gammad_prev = gammad.copy()
+    
+    # calculate bounds
     bound = -float("inf")
     bound_prev = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
 
@@ -180,10 +183,12 @@ def _doc_update(m, X, gamma, beta, alpha):
                 break
 
             # TODO: if bound_prev < bound, something is wrong
+            assert bound_prev > bound - 1e-10
+                
             # TODO: check convergence
 
     bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
-    return bound, gammad, phi, ixw
+    return bound, gammad, phi
 
 
 class LDA(object):

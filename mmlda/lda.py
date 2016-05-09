@@ -88,6 +88,7 @@ def _slice_doc_update(X, gamma, beta, alpha, slice):
     _loc_gamma = gamma[:, slice]  # get local gamma
     _loc_bound = 0
 
+    print slice
     for m in xrange(sl_length):
         bound, gammad, phi, ixw = _doc_update(m, Xsl, gamma, beta, alpha)
         
@@ -97,7 +98,7 @@ def _slice_doc_update(X, gamma, beta, alpha, slice):
     return _loc_beta, _loc_gamma, _loc_bound
 
 
-def _doc_lowerbound(phi, gamma, beta, alpha):
+def _doc_lowerbound(phi, gamma, beta, alpha, p=False):
     tmp = (spec.digamma(gamma) - spec.digamma(np.sum(gamma)))
     mean_log_ptheta = np.log(spec.gamma(np.sum(alpha))) - \
                       np.sum(np.log(spec.gamma(alpha))) +\
@@ -108,6 +109,11 @@ def _doc_lowerbound(phi, gamma, beta, alpha):
     neg_mean_log_qz = - np.sum(phi * np.log(phi))
 
     bound = mean_log_ptheta + mean_log_pz + mean_log_pw + neg_mean_log_qtheta + neg_mean_log_qz
+    if p:
+        print "Phi-sum in bound",np.sum(phi, 1)
+        print "gamma in bound",gamma
+        print "bound", bound
+        print
 
     return bound
 
@@ -287,3 +293,25 @@ class LDA(object):
         :return:
         """
         return np.exp(-log_w/X.sum())
+
+    def _heldout_perplexity(self, X, ):
+        """
+        Given a previously unseen set of documents, computes logp_w for each of them, and computes the perplexity
+        logp_w is intractable, and the lower bound gives an estimate. Differently from training documents,
+        we do not touch beta's here.
+        :param X:
+        :return:
+        """
+        pass
+
+    def _predictive_dist(self, gamma, Beta):
+        """
+        Given a previously trained document,
+        compute a vector of probabilities, elements of which correspond to P(w|w_obs, model)
+        :param x:
+        :return:
+        """
+
+        # for each k we have a dirichlet expectation, then we take a linear combination weighted
+        # by probabilities of words given topics
+        return np.dot(stats.dirichlet.mean(gamma), Beta)

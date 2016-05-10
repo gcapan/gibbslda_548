@@ -115,7 +115,8 @@ def _doc_lowerbound(phi, gamma, beta, alpha):
 
     return bound
 
-def _doc_update(ixw, gammad, beta, alpha):
+
+def _doc_update(ixw, gammad, beta, alpha, tol=1e-2):
     """
     Take an E update step for a document. Runs the variational inference iteration
     per document until convergence or maxiter of 200 is reached. 
@@ -141,12 +142,10 @@ def _doc_update(ixw, gammad, beta, alpha):
     K = len(gammad)
     
     # index to the words appearing in the document
-    # ixw = X.indices[X.indptr[m]:X.indptr[m+1]]  # index optimized for sparse matrices
     
     phi = np.zeros((K, len(ixw)), dtype=float) + 1./K  # only appearing words get a phi
 
     # slice for the document only once
-    # gammad = gamma[:, m]
     beta_ixw_T = beta[:, ixw].T
     beta_ixw = beta[:, ixw]
 
@@ -169,23 +168,10 @@ def _doc_update(ixw, gammad, beta, alpha):
         gammad = alpha + np.sum(phi, axis=1)
 
         if ctr % 20 == 0:  # check convergence
-            dphinorm = mean_change_2d(phi, phi_prev)
-            dgammadnorm = mean_change(gammad, gammad_prev)
             bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
-
-            # print dphinorm, dgammadnorm
-            phi_prev = phi.copy()
-            gammad_prev = gammad.copy()
-            bound_prev = bound
-
-            # TODO: 1e-1 too high for convergence
-            if dphinorm < 1e-1 and dgammadnorm < 1e-1:
+            if bound - bound_prev < tol:
                 break
-
-            # TODO: if bound_prev < bound, something is wrong
-            assert bound_prev > bound - 1e-10
-                
-            # TODO: check convergence
+            bound_prev = bound
 
     bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
     return bound, gammad, phi

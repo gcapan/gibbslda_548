@@ -85,16 +85,20 @@ def _slice_doc_update(X, gamma, beta, alpha, slice):
     sl_length, V = Xsl.shape  # grab slice length 
     
     _loc_beta = np.zeros(beta.shape)  # get a local beta
-    _loc_gamma = gamma[:, slice]  # get local gamma
+    _loc_gamma = gamma[:, slice]  # get local gamma slice
     _loc_bound = 0
 
     print slice
     for m in xrange(sl_length):
-        bound, gammad, phi, ixw = _doc_update(m, Xsl, gamma, beta, alpha)
+        # an index to the words of this document is generated
+        ixw = Xsl.indices[Xsl.indptr[m]:Xsl.indptr[m+1]]  # index optimized for sparse matrices
+        
+        bound, gammad, phi = _doc_update(ixw,  _loc_gamma[:, m], beta, alpha)
         
         _loc_gamma[:, m] = gammad  # assignment by reference!!
         _loc_beta[:, ixw] += phi * Xsl[m, ixw].A
         _loc_bound += bound
+    
     return _loc_beta, _loc_gamma, _loc_bound
 
 
@@ -117,19 +121,17 @@ def _doc_lowerbound(phi, gamma, beta, alpha, p=False):
 
     return bound
 
-def _doc_update(m, X, gamma, beta, alpha):
+
+def _doc_update(ixw, gammad, beta, alpha, tol=1e-2):
     """
     Take an E update step for a document. Runs the variational inference iteration
     per document until convergence or maxiter of 200 is reached. 
 
-    :type m: int
-    :param m: the index to the document in the referring slice.
+    :type ixw: numpy.array
+    :param ixw: the index to the words appearing in the document
     
-    :type X: scipy.sparse.csr_matrix
-    :param X: the slice of the matrix that we will work on
-    
-    :type gamma: numpy.array
-    :param gamma: current assignment gamma, the var. Dir. prior (n_topics, n_documents)
+    :type gammad: numpy.array
+    :param gammad: current assignment to this document's gamma, the var. Dir. prior (n_topics, n_documents)
     
     :type beta: numpy.array
     :param beta: current assignment to beta, the topic-word distribution (n_topics, n_words)
@@ -143,21 +145,21 @@ def _doc_update(m, X, gamma, beta, alpha):
              ixw: index to the words appearing in this document (array of ints)
     """
     # TODO: this method should see only what it should see!
-    K, _ = gamma.shape
+    K = len(gammad)
     
     # index to the words appearing in the document
-    ixw = X.indices[X.indptr[m]:X.indptr[m+1]]  # index optimized for sparse matrices
     
     phi = np.zeros((K, len(ixw)), dtype=float) + 1./K  # only appearing words get a phi
 
     # slice for the document only once
-    gammad = gamma[:, m]
-    beta_ixw_T = beta[:, ixw].T
+    # beta_ixw_T = beta[:, ixw].T
     beta_ixw = beta[:, ixw]
 
     # store the previous values for convergence check
     phi_prev = phi.copy()
     gammad_prev = gammad.copy()
+    
+    # calculate bounds
     bound = -float("inf")
     bound_prev = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
 
@@ -165,36 +167,25 @@ def _doc_update(m, X, gamma, beta, alpha):
         # update phi
         # WARN: exp digamma underflows < 1e-3!
         # TODO: carry this to the log domain?
-        phi = (beta_ixw_T * np.exp(spec.digamma(gammad))).T
+        phi = (beta_ixw.T * np.exp(spec.digamma(gammad))).T
         phi /= np.sum(phi, 0)  # normalize phi columns
 
         # update gamma
         gammad = alpha + np.sum(phi, axis=1)
 
         if ctr % 20 == 0:  # check convergence
-            dphinorm = mean_change_2d(phi, phi_prev)
-            dgammadnorm = mean_change(gammad, gammad_prev)
             bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
-
-            # print dphinorm, dgammadnorm
-            phi_prev = phi.copy()
-            gammad_prev = gammad.copy()
+            if bound - bound_prev < tol:
+                break
             bound_prev = bound
 
-            # TODO: 1e-1 too high for convergence
-            if dphinorm < 1e-1 and dgammadnorm < 1e-1:
-                break
-
-            # TODO: if bound_prev < bound, something is wrong
-            # TODO: check convergence
-
     bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
-    return bound, gammad, phi, ixw
+    return bound, gammad, phi
 
 
 class LDA(object):
 
-    def __init__(self, K=5, alpha=None, n_jobs=8):
+    def __init__(self, K=5, alpha=None, n_jobs=8, nr_em_epochs=10):
         """
         Construct the LDA model (i.e. do not run it yet)
         
@@ -206,6 +197,9 @@ class LDA(object):
         
         :type n_jobs: int
         :param n_jobs: how many CPUs to use?
+        
+        :type nr_em_epochs: int
+        :param nr_em_epochs: number of EM iterations to perform
         """
         self.alpha = alpha
         if self.alpha is None:
@@ -213,6 +207,7 @@ class LDA(object):
         self.K = K
 
         self.n_jobs = n_jobs
+        self.nr_em_epochs = nr_em_epochs
 
     def fit(self, X):
         """
@@ -225,7 +220,7 @@ class LDA(object):
         :return: beta: the fitted topic-term distribution (n_topics, n_terms)
                  gamma: the fitted var. Dir prior (n_topics, n_documents)
         """
-        bound = 0
+        
         perplexity = float("inf")
         K = self.K # number of topics
         alpha = self.alpha
@@ -243,8 +238,9 @@ class LDA(object):
         # slice the documents for multiprocessing
         slices = get_slices(M, self.n_jobs)
 
-        for epoch in xrange(10):
-
+        for epoch in xrange(self.nr_em_epochs):
+            bound = 0.
+            
             # TODO: calculate bound function and check EM convergence 
             # E-step
             print "Epoch:", epoch

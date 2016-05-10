@@ -146,7 +146,7 @@ def _doc_update(ixw, gammad, beta, alpha, tol=1e-2):
     phi = np.zeros((K, len(ixw)), dtype=float) + 1./K  # only appearing words get a phi
 
     # slice for the document only once
-    beta_ixw_T = beta[:, ixw].T
+    # beta_ixw_T = beta[:, ixw].T
     beta_ixw = beta[:, ixw]
 
     # store the previous values for convergence check
@@ -161,7 +161,7 @@ def _doc_update(ixw, gammad, beta, alpha, tol=1e-2):
         # update phi
         # WARN: exp digamma underflows < 1e-3!
         # TODO: carry this to the log domain?
-        phi = (beta_ixw_T * np.exp(spec.digamma(gammad))).T
+        phi = (beta_ixw.T * np.exp(spec.digamma(gammad))).T
         phi /= np.sum(phi, 0)  # normalize phi columns
 
         # update gamma
@@ -179,7 +179,7 @@ def _doc_update(ixw, gammad, beta, alpha, tol=1e-2):
 
 class LDA(object):
 
-    def __init__(self, K=5, alpha=None, n_jobs=8):
+    def __init__(self, K=5, alpha=None, n_jobs=8, nr_em_epochs=10):
         """
         Construct the LDA model (i.e. do not run it yet)
         
@@ -191,6 +191,9 @@ class LDA(object):
         
         :type n_jobs: int
         :param n_jobs: how many CPUs to use?
+        
+        :type nr_em_epochs: int
+        :param nr_em_epochs: number of EM iterations to perform
         """
         self.alpha = alpha
         if self.alpha is None:
@@ -198,6 +201,7 @@ class LDA(object):
         self.K = K
 
         self.n_jobs = n_jobs
+        self.nr_em_epochs = nr_em_epochs
 
     def fit(self, X):
         """
@@ -210,7 +214,7 @@ class LDA(object):
         :return: beta: the fitted topic-term distribution (n_topics, n_terms)
                  gamma: the fitted var. Dir prior (n_topics, n_documents)
         """
-        bound = 0
+        
         perplexity = float("inf")
         K = self.K # number of topics
         alpha = self.alpha
@@ -228,8 +232,9 @@ class LDA(object):
         # slice the documents for multiprocessing
         slices = get_slices(M, self.n_jobs)
 
-        for epoch in xrange(10):
-
+        for epoch in xrange(self.nr_em_epochs):
+            bound = 0.
+            
             # TODO: calculate bound function and check EM convergence 
             # E-step
             print "Epoch:", epoch

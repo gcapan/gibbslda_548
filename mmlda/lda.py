@@ -88,7 +88,6 @@ def _slice_doc_update(X, gamma, beta, alpha, slice):
     _loc_gamma = gamma[:, slice]  # get local gamma slice
     _loc_bound = 0
 
-    print slice
     for m in xrange(sl_length):
         # an index to the words of this document is generated
         ixw = Xsl.indices[Xsl.indptr[m]:Xsl.indptr[m+1]]  # index optimized for sparse matrices
@@ -102,7 +101,7 @@ def _slice_doc_update(X, gamma, beta, alpha, slice):
     return _loc_beta, _loc_gamma, _loc_bound
 
 
-def _doc_lowerbound(phi, gamma, beta, alpha, p=False):
+def _doc_lowerbound(phi, gamma, beta, alpha):
     tmp = (spec.digamma(gamma) - spec.digamma(np.sum(gamma)))
     mean_log_ptheta = np.log(spec.gamma(np.sum(alpha))) - \
                       np.sum(np.log(spec.gamma(alpha))) +\
@@ -113,11 +112,6 @@ def _doc_lowerbound(phi, gamma, beta, alpha, p=False):
     neg_mean_log_qz = - np.sum(phi * np.log(phi))
 
     bound = mean_log_ptheta + mean_log_pz + mean_log_pw + neg_mean_log_qtheta + neg_mean_log_qz
-    if p:
-        print "Phi-sum in bound",np.sum(phi, 1)
-        print "gamma in bound",gamma
-        print "bound", bound
-        print
 
     return bound
 

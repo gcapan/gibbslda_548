@@ -87,18 +87,20 @@ def _slice_doc_update(X, gamma, beta, alpha, slice):
     _loc_beta = np.zeros(beta.shape)  # get a local beta
     _loc_gamma = gamma[:, slice]  # get local gamma slice
     _loc_bound = 0
+    _loc_logw = 0
 
     for m in xrange(sl_length):
         # an index to the words of this document is generated
         ixw = Xsl.indices[Xsl.indptr[m]:Xsl.indptr[m+1]]  # index optimized for sparse matrices
         
-        bound, gammad, phi = _doc_update(ixw,  _loc_gamma[:, m], beta, alpha)
+        logw, bound, gammad, phi = _doc_update(ixw,  _loc_gamma[:, m], beta, alpha)
         
         _loc_gamma[:, m] = gammad  # assignment by reference!!
         _loc_beta[:, ixw] += phi * Xsl[m, ixw].A
         _loc_bound += bound
+        _loc_logw += np.sum(logw)
     
-    return _loc_beta, _loc_gamma, _loc_bound
+    return _loc_beta, _loc_gamma, _loc_bound, _loc_logw
 
 
 def _doc_lowerbound(phi, gamma, beta, alpha):
@@ -114,6 +116,27 @@ def _doc_lowerbound(phi, gamma, beta, alpha):
     bound = mean_log_ptheta + mean_log_pz + mean_log_pw + neg_mean_log_qtheta + neg_mean_log_qz
 
     return bound
+
+
+def _doc_probability(ixw, gammad, beta):
+    '''
+    Compute p(w_d) whose parameters we know,
+    :return: log-probability distribution over words of the document
+    '''
+    beta_ixw = beta[:, ixw]
+
+    pw = np.sum(beta_ixw.T * stats.dirichlet.mean(gammad), axis = 1)
+    return np.log(pw)
+
+def _heldout_doc_probability(ixw, alpha, beta):
+    '''
+    Compute p(w_d) for a held-out document
+    :return: log-probability
+    '''
+    K, V = beta.shape
+    gammad = np.zeros(K) + alpha + (len(ixw)/float(K))
+    _, inferred_gamma, _ = _doc_update(ixw, gammad, beta, alpha)
+    return _doc_probability(ixw, gammad, beta)
 
 
 def _doc_update(ixw, gammad, beta, alpha, tol=1e-2):
@@ -174,7 +197,8 @@ def _doc_update(ixw, gammad, beta, alpha, tol=1e-2):
             bound_prev = bound
 
     bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
-    return bound, gammad, phi
+    log_w = _doc_probability(ixw, gammad, beta)
+    return log_w, bound, gammad, phi
 
 
 class LDA(object):
@@ -233,7 +257,7 @@ class LDA(object):
         slices = get_slices(M, self.n_jobs)
 
         for epoch in xrange(self.nr_em_epochs):
-            bound = 0.
+            log_w = 0.
             
             # TODO: calculate bound function and check EM convergence 
             # E-step
@@ -253,14 +277,14 @@ class LDA(object):
             for ix, r in enumerate(res):
                 gamma[:, slices[ix]] = r[1]  # update gammas
                 beta_acc += r[0]  # update betas
-                bound += r[2]
+                log_w += r[3]
 
             # M-step
             beta = self._m_step(beta_acc)
 
             # quality - p(w) is the normalizing constant of the posterior
             # and it is intractable - bound gives an estimate
-            perplexity = self._perplexity(X, bound)
+            perplexity = self._perplexity(X, log_w)
             print "Perplexity:", perplexity
 
         print
@@ -279,29 +303,10 @@ class LDA(object):
 
     def _perplexity(self, X, log_w):
         """
-        TODO: Calculate the lower bound function to check convergence
-        :return:
+        This is just an approximation. Ideally, it should compute the doc probabilities
+        after the M-step, but here we use the previously assigned \Beta's
+        :return: perplexity, higher means high surprise (not desired)
         """
         return np.exp(-log_w/X.sum())
 
-    def _heldout_perplexity(self, X, ):
-        """
-        Given a previously unseen set of documents, computes logp_w for each of them, and computes the perplexity
-        logp_w is intractable, and the lower bound gives an estimate. Differently from training documents,
-        we do not touch beta's here.
-        :param X:
-        :return:
-        """
-        pass
 
-    def _predictive_dist(self, gamma, Beta):
-        """
-        Given a previously trained document,
-        compute a vector of probabilities, elements of which correspond to P(w|w_obs, model)
-        :param x:
-        :return:
-        """
-
-        # for each k we have a dirichlet expectation, then we take a linear combination weighted
-        # by probabilities of words given topics
-        return np.dot(stats.dirichlet.mean(gamma), Beta)

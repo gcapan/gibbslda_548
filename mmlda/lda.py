@@ -98,9 +98,10 @@ def _slice_doc_update(X, gamma, beta, alpha, slice, eta=None, f=None):
         
         if eta is not None:
             eta_ixw = eta[:, f[ixw]]
-            logw, bound, gammad, phi = _doc_update(_loc_gamma[:, m], beta[:, ixw], alpha, eta_ixw=eta_ixw)
+            logw, bound, gammad, phi = _doc_update(_loc_gamma[:, m], np.log(beta[:, ixw]), alpha,
+                                                   logeta_ixw=np.log(eta_ixw))
         else:
-            logw, bound, gammad, phi = _doc_update(_loc_gamma[:, m], beta[:, ixw], alpha)
+            logw, bound, gammad, phi = _doc_update(_loc_gamma[:, m], np.log(beta[:, ixw]), alpha)
         
         _loc_gamma[:, m] = gammad  # assignment by reference!!
         
@@ -135,44 +136,44 @@ def _phi_for_f(ixw, phi, f, counts):
     return phi_adjusted
 
 
-def _doc_lowerbound(phi, gamma, beta_ixw, alpha, eta_ixw = None):
+def _doc_lowerbound(phi, gamma, logbeta_ixw, alpha, logeta_ixw = None):
     tmp = (spec.digamma(gamma) - spec.digamma(np.sum(gamma)))
     mean_log_ptheta = np.log(spec.gamma(np.sum(alpha))) - \
                       np.sum(np.log(spec.gamma(alpha))) +\
                       np.sum((alpha - 1) * tmp)
     mean_log_pz = np.sum(phi.T * tmp)
-    mean_log_pw = np.sum(phi * np.log(beta_ixw))
-    if eta_ixw is not None:
-        mean_log_pw += np.sum(phi * np.log(eta_ixw))
+    mean_log_pw = np.sum(phi * logbeta_ixw)
+    if logeta_ixw is not None:
+        mean_log_pw += np.sum(phi * logeta_ixw)
     neg_mean_log_qtheta = stats.dirichlet.entropy(gamma)
-    neg_mean_log_qz = - np.sum(phi * np.log(phi))
+    neg_mean_log_qz = -np.sum(phi * np.log(phi))
 
     bound = mean_log_ptheta + mean_log_pz + mean_log_pw + neg_mean_log_qtheta + neg_mean_log_qz
 
     return bound
 
 
-def _doc_probability(gammad, beta_ixw, eta_ixw=None):
+def _doc_probability(gammad, logbeta_ixw, logeta_ixw=None):
     '''
     Compute p(w_d) whose parameters we know,
     :return: log-probability distribution over words of the document
     '''
 
-    pw = np.sum(beta_ixw.T * stats.dirichlet.mean(gammad), axis = 1)
-    return np.log(pw)
+    logpw = logsumexp(logbeta_ixw.T + np.log(stats.dirichlet.mean(gammad)), axis = 1)
+    return logpw
 
-def _heldout_doc_probability(alpha, beta_ixw, eta_ixw = None):
+def _heldout_doc_probability(alpha, logbeta_ixw, logeta_ixw = None):
     '''
     Compute p(w_d) for a held-out document
     :return: log-probability
     '''
-    K, V = beta_ixw.shape
+    K, V = logbeta_ixw.shape
     gammad = np.zeros(K) + alpha + (V/float(K))
-    _, inferred_gamma, _ = _doc_update(gammad, beta_ixw, alpha, eta_ixw = eta_ixw)
-    return _doc_probability(gammad, beta_ixw, eta_ixw=eta_ixw)
+    _, inferred_gamma, _ = _doc_update(gammad, logbeta_ixw, alpha, logeta_ixw = logeta_ixw)
+    return _doc_probability(gammad, logbeta_ixw, logeta_ixw=logeta_ixw)
 
 
-def _doc_update(gammad, beta_ixw, alpha, tol=1e-2, eta_ixw=None):
+def _doc_update(gammad, logbeta_ixw, alpha, tol=1e-2, logeta_ixw=None):
     """
     Take an E update step for a document. Runs the variational inference iteration
     per document until convergence or maxiter of 200 is reached. 
@@ -202,7 +203,7 @@ def _doc_update(gammad, beta_ixw, alpha, tol=1e-2, eta_ixw=None):
     
     # index to the words appearing in the document
     
-    K, N = beta_ixw.shape
+    K, N = logbeta_ixw.shape
     
     phi = np.zeros((K, N), dtype=float) + 1./K  # only appearing words get a phi
 
@@ -212,15 +213,15 @@ def _doc_update(gammad, beta_ixw, alpha, tol=1e-2, eta_ixw=None):
     
     # calculate bounds
     bound = -float("inf")
-    bound_prev = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
+    bound_prev = _doc_lowerbound(phi, gammad, logbeta_ixw, alpha)
 
     for ctr in xrange(200):
         # update phi
         # WARN: exp digamma underflows < 1e-3!
         # TODO: carry this to the log domain?
-        log_mult = np.log(beta_ixw.T)
-        if eta_ixw is not None: 
-            log_mult += np.log(eta_ixw.T)
+        log_mult = logbeta_ixw.T
+        if logeta_ixw is not None:
+            log_mult += logeta_ixw.T
         
         logphi = (log_mult + spec.digamma(gammad)).T
         logphi -= logsumexp(logphi, 0)
@@ -230,13 +231,13 @@ def _doc_update(gammad, beta_ixw, alpha, tol=1e-2, eta_ixw=None):
         gammad = alpha + np.sum(phi, axis=1)
 
         if ctr % 20 == 0:  # check convergence
-            bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha, eta_ixw)
+            bound = _doc_lowerbound(phi, gammad, logbeta_ixw, alpha, logeta_ixw)
             if bound - bound_prev < tol:
                 break
             bound_prev = bound
 
-    bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
-    log_w = _doc_probability(gammad, beta_ixw, eta_ixw)
+    bound = _doc_lowerbound(phi, gammad, logbeta_ixw, alpha)
+    log_w = _doc_probability(gammad, logbeta_ixw, logeta_ixw)
     return log_w, bound, gammad, phi
 
 

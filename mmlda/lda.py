@@ -108,9 +108,11 @@ def _slice_doc_update(X, gamma, beta, alpha, slice, eta=None, f=None):
         _loc_beta[:, ixw] += phi * counts 
         # _loc_eta[:, ]
         
-        for s in range(_loc_eta.shape[1]):
-            etym_ix = (f[ixw] == s)
-            _loc_eta[:, s] += _phi_for_f(ixw, phi, f, counts)
+        if eta is not None:
+            _loc_eta += _phi_for_f(ixw, phi, f, counts)
+            # for s in range(_loc_eta.shape[1]):
+            #     etym_ix = (f[ixw] == s)
+                
         
         _loc_bound += bound
         _loc_logw += np.sum(logw)

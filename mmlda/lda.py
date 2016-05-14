@@ -222,8 +222,9 @@ def _doc_update(gammad, beta_ixw, alpha, tol=1e-2, eta_ixw=None):
         if eta_ixw is not None: 
             log_mult += np.log(eta_ixw.T)
         
-        phi = np.exp(log_mult + spec.digamma(gammad)).T
-        phi /= np.sum(phi, 0)  # normalize phi columns
+        logphi = (log_mult + spec.digamma(gammad)).T
+        logphi -= logsumexp(logphi, 0)
+        phi = np.exp(logphi)  # normalize phi columns
 
         # update gamma
         gammad = alpha + np.sum(phi, axis=1)

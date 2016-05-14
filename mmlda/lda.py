@@ -110,7 +110,7 @@ def _slice_doc_update(X, gamma, beta, alpha, slice, eta=None, f=None):
         
         for s in range(_loc_eta.shape[1]):
             etym_ix = (f[ixw] == s)
-            _loc_eta[:, s] += phi[:, etym_ix] * counts[etym_ix]
+            _loc_eta[:, s] += _phi_for_f(ixw, phi, f, counts)
         
         _loc_bound += bound
         _loc_logw += np.sum(logw)
@@ -120,14 +120,24 @@ def _slice_doc_update(X, gamma, beta, alpha, slice, eta=None, f=None):
     
     return return_tuple
 
+def _phi_for_f(ixw, phi, f, counts):
+    F = len(np.unique(f))
+    K, V = phi.shape
+    phi_adjusted = np.zeros(K, F)
+    for s in range(F):
+        etym_ix = (f[ixw] == s)
+        phi_adjusted[:, s] = np.sum(phi[:, etym_ix] * counts[etym_ix], axis = 1)
+    return phi_adjusted
 
-def _doc_lowerbound(phi, gamma, beta, alpha):
+def _doc_lowerbound(phi, gamma, beta_ixw, alpha, eta_ixw = None):
     tmp = (spec.digamma(gamma) - spec.digamma(np.sum(gamma)))
     mean_log_ptheta = np.log(spec.gamma(np.sum(alpha))) - \
                       np.sum(np.log(spec.gamma(alpha))) +\
                       np.sum((alpha - 1) * tmp)
     mean_log_pz = np.sum(phi.T * tmp)
-    mean_log_pw = np.sum(phi * np.log(beta))
+    mean_log_pw = np.sum(phi * np.log(beta_ixw))
+    if eta_ixw is not None:
+        mean_log_pw += np.sum(phi * np.log(eta_ixw))
     neg_mean_log_qtheta = stats.dirichlet.entropy(gamma)
     neg_mean_log_qz = - np.sum(phi * np.log(phi))
 
@@ -136,25 +146,24 @@ def _doc_lowerbound(phi, gamma, beta, alpha):
     return bound
 
 
-def _doc_probability(ixw, gammad, beta):
+def _doc_probability(gammad, beta_ixw, eta_ixw=None):
     '''
     Compute p(w_d) whose parameters we know,
     :return: log-probability distribution over words of the document
     '''
-    beta_ixw = beta[:, ixw]
 
     pw = np.sum(beta_ixw.T * stats.dirichlet.mean(gammad), axis = 1)
     return np.log(pw)
 
-def _heldout_doc_probability(ixw, alpha, beta):
+def _heldout_doc_probability(alpha, beta_ixw, eta_ixw = None):
     '''
     Compute p(w_d) for a held-out document
     :return: log-probability
     '''
-    K, V = beta.shape
-    gammad = np.zeros(K) + alpha + (len(ixw)/float(K))
-    _, inferred_gamma, _ = _doc_update(ixw, gammad, beta, alpha)
-    return _doc_probability(ixw, gammad, beta)
+    K, V = beta_ixw.shape
+    gammad = np.zeros(K) + alpha + (V/float(K))
+    _, inferred_gamma, _ = _doc_update(gammad, beta_ixw, alpha, eta_ixw = eta_ixw)
+    return _doc_probability(gammad, beta_ixw, eta_ixw=eta_ixw)
 
 
 def _doc_update(gammad, beta_ixw, alpha, tol=1e-2, eta_ixw=None):

@@ -113,7 +113,6 @@ def _slice_doc_update(X, gamma, beta, alpha, slice, eta=None, f=None):
             # for s in range(_loc_eta.shape[1]):
             #     etym_ix = (f[ixw] == s)
                 
-        
         _loc_bound += bound
         _loc_logw += np.sum(logw)
     
@@ -136,17 +135,19 @@ def _phi_for_f(ixw, phi, f, counts):
 
 
 def _doc_lowerbound(phi, gamma, beta_ixw, alpha, eta_ixw = None):
-    tmp = (spec.digamma(gamma) - spec.digamma(np.sum(gamma)))
-    mean_log_ptheta = np.log(spec.gamma(np.sum(alpha))) - \
-                      np.sum(np.log(spec.gamma(alpha))) +\
-                      np.sum((alpha - 1) * tmp)
-    mean_log_pz = np.sum(phi.T * tmp)
-    mean_log_pw = np.sum(phi * np.log(beta_ixw))
-    if eta_ixw is not None:
-        mean_log_pw += np.sum(phi * np.log(eta_ixw))
-    neg_mean_log_qtheta = stats.dirichlet.entropy(gamma)
-    neg_mean_log_qz = - np.sum(phi * np.log(phi))
-
+    try:
+        tmp = (spec.digamma(gamma) - spec.digamma(np.sum(gamma)))
+        mean_log_ptheta = np.log(spec.gamma(np.sum(alpha))) - \
+                          np.sum(np.log(spec.gamma(alpha))) +\
+                          np.sum((alpha - 1) * tmp)
+        mean_log_pz = np.sum(phi.T * tmp)
+        mean_log_pw = np.sum(phi * np.log(beta_ixw))
+        if eta_ixw is not None:
+            mean_log_pw += np.sum(phi * np.log(eta_ixw))
+        neg_mean_log_qtheta = stats.dirichlet.entropy(gamma)
+        neg_mean_log_qz = - np.sum(phi * np.log(phi))
+    except FloatingPointError:
+        fuck()
     bound = mean_log_ptheta + mean_log_pz + mean_log_pw + neg_mean_log_qtheta + neg_mean_log_qz
 
     return bound
@@ -224,7 +225,7 @@ def _doc_update(gammad, beta_ixw, alpha, tol=1e-2, eta_ixw=None):
         
         logphi = (log_mult + spec.digamma(gammad)).T
         logphi -= logsumexp(logphi, 0)
-        phi = np.exp(logphi)  # normalize phi columns
+        phi = np.exp(logphi) + 1e-50  # normalize phi columns
 
         # update gamma
         gammad = alpha + np.sum(phi, axis=1)

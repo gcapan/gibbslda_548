@@ -1,6 +1,8 @@
 from lda import LDA, _doc_update, _slice_doc_update
 import pickle
+import numpy as np
 
+np.seterr(divide="raise")
 
 from data.datafile import AADataFile
 dfile = pickle.load(open("data/datafile.pkl"))

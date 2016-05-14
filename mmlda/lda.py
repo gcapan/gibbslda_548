@@ -46,7 +46,7 @@ def get_slices(n, n_buckets):
     return slices
 
 
-def _slice_doc_update(X, gamma, beta, alpha, slice):
+def _slice_doc_update(X, gamma, beta, alpha, slice, eta=None, f=None):
     """
     Given a data array X, and a slice object `slice`, take the 
     subset of documents corresponding to the slice and for each
@@ -88,19 +88,37 @@ def _slice_doc_update(X, gamma, beta, alpha, slice):
     _loc_gamma = gamma[:, slice]  # get local gamma slice
     _loc_bound = 0
     _loc_logw = 0
+    
+    if eta is not None:
+        _loc_eta = np.zeros(eta.shape)
 
     for m in xrange(sl_length):
         # an index to the words of this document is generated
         ixw = Xsl.indices[Xsl.indptr[m]:Xsl.indptr[m+1]]  # index optimized for sparse matrices
         
-        logw, bound, gammad, phi = _doc_update(ixw,  _loc_gamma[:, m], beta, alpha)
+        if eta is not None:
+            eta_ixw = eta[:, f[ixw]]
+            logw, bound, gammad, phi = _doc_update(_loc_gamma[:, m], beta[:, ixw], alpha, eta_ixw)
+        else:
+            logw, bound, gammad, phi = _doc_update(_loc_gamma[:, m], beta[:, ixw], alpha)
         
         _loc_gamma[:, m] = gammad  # assignment by reference!!
-        _loc_beta[:, ixw] += phi * Xsl[m, ixw].A
+        
+        counts = Xsl[m, ixw].A
+        _loc_beta[:, ixw] += phi * counts 
+        # _loc_eta[:, ]
+        
+        for s in range(_loc_eta.shape[1]):
+            etym_ix = (f[ixw] == s)
+            _loc_eta[:, s] += phi[:, etym_ix] * counts[etym_ix]
+        
         _loc_bound += bound
         _loc_logw += np.sum(logw)
     
-    return _loc_beta, _loc_gamma, _loc_bound, _loc_logw
+    return_tuple = (_loc_beta, _loc_gamma, _loc_bound, _loc_logw)
+    if eta is not None: return_tuple += (_loc_eta,)
+    
+    return return_tuple
 
 
 def _doc_lowerbound(phi, gamma, beta, alpha):
@@ -139,7 +157,7 @@ def _heldout_doc_probability(ixw, alpha, beta):
     return _doc_probability(ixw, gammad, beta)
 
 
-def _doc_update(ixw, gammad, beta, alpha, tol=1e-2):
+def _doc_update(gammad, beta_ixw, alpha, tol=1e-2, eta_ixw=None):
     """
     Take an E update step for a document. Runs the variational inference iteration
     per document until convergence or maxiter of 200 is reached. 
@@ -150,9 +168,13 @@ def _doc_update(ixw, gammad, beta, alpha, tol=1e-2):
     :type gammad: numpy.array
     :param gammad: current assignment to this document's gamma, the var. Dir. prior (n_topics, n_documents)
     
-    :type beta: numpy.array
-    :param beta: current assignment to beta, the topic-word distribution (n_topics, n_words)
-     
+    :type beta_ixw: numpy.array
+    :param beta_ixw: current assignment to beta, the topic-word distribution (n_topics, n_words_appearing)
+        beta_ixw = beta[:, ixw]
+    
+    :type eta_ixw: numpy.array
+    :param eta_ixw:
+    
     :type alpha: float
     :param alpha: parameter to the Dirichlet prior over topic-document distribution
     
@@ -162,15 +184,12 @@ def _doc_update(ixw, gammad, beta, alpha, tol=1e-2):
              ixw: index to the words appearing in this document (array of ints)
     """
     # TODO: this method should see only what it should see!
-    K = len(gammad)
     
     # index to the words appearing in the document
     
-    phi = np.zeros((K, len(ixw)), dtype=float) + 1./K  # only appearing words get a phi
-
-    # slice for the document only once
-    # beta_ixw_T = beta[:, ixw].T
-    beta_ixw = beta[:, ixw]
+    K, N = beta_ixw.shape
+    
+    phi = np.zeros((K, N), dtype=float) + 1./K  # only appearing words get a phi
 
     # store the previous values for convergence check
     phi_prev = phi.copy()
@@ -184,20 +203,24 @@ def _doc_update(ixw, gammad, beta, alpha, tol=1e-2):
         # update phi
         # WARN: exp digamma underflows < 1e-3!
         # TODO: carry this to the log domain?
-        phi = (beta_ixw.T * np.exp(spec.digamma(gammad))).T
+        mult = beta_ixw.T
+        if eta_ixw is not None: 
+            mult *= eta_ixw.T
+        
+        phi = (mult * np.exp(spec.digamma(gammad))).T
         phi /= np.sum(phi, 0)  # normalize phi columns
 
         # update gamma
         gammad = alpha + np.sum(phi, axis=1)
 
         if ctr % 20 == 0:  # check convergence
-            bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
+            bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha, eta_ixw)
             if bound - bound_prev < tol:
                 break
             bound_prev = bound
 
     bound = _doc_lowerbound(phi, gammad, beta_ixw, alpha)
-    log_w = _doc_probability(ixw, gammad, beta)
+    log_w = _doc_probability(gammad, beta_ixw, eta_ixw)
     return log_w, bound, gammad, phi
 
 
@@ -227,12 +250,14 @@ class LDA(object):
         self.n_jobs = n_jobs
         self.nr_em_epochs = nr_em_epochs
 
-    def fit(self, X):
+    def fit(self, X, f=None):
         """
         Fit the LDA model using the variational-EM algorithm (Blei et al., 2003).
         
         :type X: scipy.sparse.csr_matrix
         :param X: the term-document matrix, of type (n_documents, n_terms)
+        
+        :param f: np.array [1,2,3,3,3,4,1,2,3...] (nr_terms,)
         
         :rtype: tuple
         :return: beta: the fitted topic-term distribution (n_topics, n_terms)
@@ -249,7 +274,12 @@ class LDA(object):
 
         # model parameters
         beta = np.random.rand(K, V)
-
+        
+        # multimodal model parameters
+        if f is not None: 
+            S = len(np.unique(f))
+            eta = np.random.rand(K, S)
+        
         # initialize the parallel processing pool
         par = Parallel(n_jobs=self.n_jobs, backend="multiprocessing")
 
@@ -266,9 +296,14 @@ class LDA(object):
             # initialize variables
             gamma = np.zeros((K, M)) + alpha + (nr_terms/float(K))  # mth document, i th topic
             beta_acc = np.zeros((K, V))
+            
 
             # work on each slice in parallel
-            res = par(delayed(_slice_doc_update)(X, gamma, beta, alpha, slice) for slice in slices)
+            if f is not None:
+                eta_acc = np.zeros((K, S))
+                res = par(delayed(_slice_doc_update)(X, gamma, beta, alpha, slice, eta, f) for slice in slices)
+            else:
+                res = par(delayed(_slice_doc_update)(X, gamma, beta, alpha, slice) for slice in slices)
             
             # do things in series - for profiling purposes
             # res = [_slice_doc_update(X, gamma, beta, alpha, slice) for slice in slices]
@@ -278,17 +313,24 @@ class LDA(object):
                 gamma[:, slices[ix]] = r[1]  # update gammas
                 beta_acc += r[0]  # update betas
                 log_w += r[3]
+                if f is not None:
+                    eta_acc += r[4]
 
             # M-step
             beta = self._m_step(beta_acc)
+            if f is not None:
+                eta = self._m_step(eta_acc)
 
             # quality - p(w) is the normalizing constant of the posterior
             # and it is intractable - bound gives an estimate
             perplexity = self._perplexity(X, log_w)
             print "Perplexity:", perplexity
 
-        print
-        return beta, gamma # the parameters learned
+        return_tuple = (beta, gamma)
+        if f is not None:
+            return_tuple += (eta,)
+        
+        return return_tuple  # the parameters learned
 
     def _m_step(self, beta_acc):
         """

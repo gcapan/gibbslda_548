@@ -98,13 +98,13 @@ def _slice_doc_update(X, gamma, beta, alpha, slice, eta=None, f=None):
         
         if eta is not None:
             eta_ixw = eta[:, f[ixw]]
-            logw, bound, gammad, phi = _doc_update(_loc_gamma[:, m], beta[:, ixw], alpha, eta_ixw)
+            logw, bound, gammad, phi = _doc_update(_loc_gamma[:, m], beta[:, ixw], alpha, eta_ixw=eta_ixw)
         else:
             logw, bound, gammad, phi = _doc_update(_loc_gamma[:, m], beta[:, ixw], alpha)
         
         _loc_gamma[:, m] = gammad  # assignment by reference!!
         
-        counts = Xsl[m, ixw].A
+        counts = Xsl[m, ixw].A.squeeze()
         _loc_beta[:, ixw] += phi * counts 
         # _loc_eta[:, ]
         
@@ -122,14 +122,18 @@ def _slice_doc_update(X, gamma, beta, alpha, slice, eta=None, f=None):
     
     return return_tuple
 
+
 def _phi_for_f(ixw, phi, f, counts):
     F = len(np.unique(f))
     K, V = phi.shape
-    phi_adjusted = np.zeros(K, F)
+    phi_adjusted = np.zeros((K, F))
+    
     for s in range(F):
         etym_ix = (f[ixw] == s)
-        phi_adjusted[:, s] = np.sum(phi[:, etym_ix] * counts[etym_ix], axis = 1)
+        phi_adjusted[:, s] = np.sum(phi[:, etym_ix] * counts[etym_ix], axis=1)
+        
     return phi_adjusted
+
 
 def _doc_lowerbound(phi, gamma, beta_ixw, alpha, eta_ixw = None):
     tmp = (spec.digamma(gamma) - spec.digamma(np.sum(gamma)))

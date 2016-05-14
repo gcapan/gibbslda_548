@@ -218,11 +218,11 @@ def _doc_update(gammad, beta_ixw, alpha, tol=1e-2, eta_ixw=None):
         # update phi
         # WARN: exp digamma underflows < 1e-3!
         # TODO: carry this to the log domain?
-        mult = beta_ixw.T
+        log_mult = np.log(beta_ixw.T)
         if eta_ixw is not None: 
-            mult *= eta_ixw.T
+            log_mult += np.log(eta_ixw.T)
         
-        phi = (mult * np.exp(spec.digamma(gammad))).T
+        phi = np.exp(log_mult + spec.digamma(gammad)).T
         phi /= np.sum(phi, 0)  # normalize phi columns
 
         # update gamma

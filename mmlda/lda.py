@@ -302,6 +302,7 @@ class LDA(object):
 
         # slice the documents for multiprocessing
         slices = get_slices(M, self.n_jobs)
+        perplexities = []
 
         for epoch in xrange(self.nr_em_epochs):
             log_w = 0.
@@ -341,9 +342,10 @@ class LDA(object):
             # quality - p(w) is the normalizing constant of the posterior
             # and it is intractable - bound gives an estimate
             perplexity = self._perplexity(X, log_w)
+            perplexities.append(perplexity)
             print "Perplexity:", perplexity
 
-        return_tuple = (beta, gamma)
+        return_tuple = (perplexities[1:], beta, gamma)
         if f is not None:
             return_tuple += (eta,)
         

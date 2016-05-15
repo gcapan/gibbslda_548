@@ -11,4 +11,4 @@ te = dfile.TE
 
 lda = LDA(K=10, n_jobs=8, nr_em_epochs=20)
 
-b, g = lda.fit(dt)
+perp, b, g = lda.fit(dt)

@@ -86,8 +86,8 @@
 
 \begin{frame}{LDA - Generative Model}
 	\begin{itemize}
-		\item $\theta$ is like a histogram, a proportions vector representing membership of document to topics
-		\item Words come from topics, and word-topic memberships from topic histograms
+		\item $\theta$ is a topic proportions vector (representing membership of the document to topics)
+		\item Words come from topics, and word-topic memberships from topic proportions
 	\end{itemize}
 \end{frame}
 
@@ -190,10 +190,10 @@
 
 \begin{frame}{Implementation}
 	\begin{itemize}
-		\item {\bf Multi-core:} Updating per-document topic histograms (inference step) can be done in parallel. 
+		\item {\bf Multi-core:} Updating per-document topic proportions (inference step) can be done in parallel. 
 		\item {\bf C when necessary:} Implementation is in Python, Cython when necessary
 		\item {\bf High performant:} In the uni-modal case, comparable in performance with popular ML libraries (and offers extra features).
-		\item {\bf Open:} Ask me if you want to use while we are trying to open it publicly
+		\item {\bf Open:} Ask me if you want to use while we are working on open-sourcing it publicly
 	\end{itemize}
 \end{frame}
 
@@ -251,7 +251,7 @@
 
 
 \begin{frame}{Experimental Results}
-	Probability of a word (with variationally computed topic histogram for the including document):
+	Probability of a word (with variationally computed topic proportion for the including document):
 	\begin{equation*}
 	 	P(w) = \int \sum_z p(w|z) p(z|\theta)q(\theta)d\theta
 	\end{equation*}
@@ -339,7 +339,7 @@ Farsi&1
 
 \begin{frame}{Discussion}
 \begin{itemize}
-\item LDA with etymological roots can end up with closer top clusters to the actual categories
+\item LDA with etymological roots can end up with closer `top (and hard)' clusters to the actual categories
 \item Etymologies were more mixed than previously assumed
 \item Proper nouns do not get etymology tags and they tend to cluster in a topic of their own
 \end{itemize}

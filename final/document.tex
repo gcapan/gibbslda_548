@@ -159,7 +159,7 @@
 		\item Variational updates:
 	\end{itemize}
 	\begin{equation*}
-		\phi_{ni}^{(t)} \gets \beta_{i w_n} \exp\left[\digamma(\gamma_{i}^{(t-1)}) - \digamma{\sum_{j=1}^k \gamma_j^{(t-1)}}\right]
+		\phi_{ni}^{(t)} \gets \beta_{i w_n} \exp\left[\psi\left(\gamma_{i}^{(t-1)}\right) - \psi\left({\sum_{j=1}^k \gamma_j^{(t-1)}}\right)\right]
 	\end{equation*}
 	
 	\begin{equation*}
@@ -176,7 +176,7 @@
 		\item Variational updates:
 	\end{itemize}
 	\begin{equation*}
-		\phi_{ni}^{(t)} \gets \eta_{i f_n} \beta_{i w_n} \exp\left[\digamma(\gamma_{i}^{(t-1)}) - \digamma{\sum_{j=1}^k \gamma_j^{(t-1)}}\right]
+		\phi_{ni}^{(t)} \gets \eta_{i f_n} \beta_{i w_n} \exp\left[\psi\left(\gamma_{i}^{(t-1)}\right) - \psi\left({\sum_{j=1}^k \gamma_j^{(t-1)}}\right)\right]
 	\end{equation*}
 	
 	\begin{equation*}
@@ -227,7 +227,7 @@
 \begin{frame}{Getting Etymological Roots}
 	
 	\begin{itemize}
-		\item TR Wiktionary is poor (unfortunately)
+		\item TR Wiktionary is poor
 		\item We manually tagged them using {\bf Nisanyan Sozluk}
 		\item We omitted \textit{Proper Nouns} 
 	\end{itemize}

@@ -356,10 +356,68 @@ class LDA(object):
     def gibbs_sample(self, X):
         """
         Samples from both \theta, \beta, and z's
+        This can be distributed (\beta updated last)
         :param X:
         :return:
         """
-        pass
+        K = self.K # number of topics
+        M, V = X.shape
+        alpha = self.alpha
+        lmda = self.lmda
+        topics = np.arange(stop=K)
+
+        #initialize everything uniformly, sparse topics
+        Beta = np.ones(shape=(K, V), dtype=float) / V
+        Theta = np.ones(shape=(M, K), dtype=float)/ K
+        #Current Z
+        Ns = np.array(range(M), dtype=object)
+
+        #Running sum
+        MC_z = np.array(range(M), dtype=object)
+        MC_beta = np.zeros(shape=(K, V), dtype=float)
+        MC_theta = np.zeros(shape=(M, K), dtype=float)
+
+        for d in range(M):
+            #allocate topics randomly -- this is really not needed in this case
+            word_indices = X[d, :].nonzero()[1]
+            random_ks = np.random.choice(topics, size = len(word_indices))
+            Ns[d] = sp.coo_matrix((np.ones(len(word_indices)),
+                                   (word_indices, random_ks)), shape=(V, K)).tocsr()
+            MC_z[d] = sp.coo_matrix((V, K), dtype=np.int8).tocsr()
+            C = np.zeros(shape=(K, V), dtype=float) + np.sum(X.A, axis=0)/float(K)
+
+        for epoch in xrange(10):
+            print "Epoch", epoch
+            for d in np.random.permutation(np.arange(M)):
+                x = X[d]
+                N_d = Ns[d]
+                for v in np.nonzero(x)[1]:
+                    old_z_n = N_d[v, :].nonzero()[1][0]
+                    # sample z given theta and beta (z is independent from other z's given theta):
+                    p_z_n = Theta[d, :] * Beta[:, v]
+                    p = p_z_n / np.sum(p_z_n)
+                    z_n = np.random.choice(topics, p = p)
+                    N_d[v, old_z_n] = 0
+                    N_d[v, z_n] = 1
+                    C[old_z_n, v] -= 1
+                    C[z_n, v] += 1
+
+                # sample theta given z and beta
+                c_theta = (np.sum(N_d.A, axis=0) + alpha)
+                Theta[d, :] = np.random.dirichlet(c_theta)
+                Ns[d] = N_d
+                MC_z[d] += N_d
+
+            # Sample beta given all z and thetas
+            c_Beta = C / np.sum(C, axis=1) + lmda
+            for k in topics:
+                c_beta = c_Beta[k, :]
+                Beta[k, :] = np.random.dirichlet(c_beta + lmda)
+
+            MC_theta += Theta
+            MC_beta += Beta
+
+        return MC_theta, MC_beta, MC_z
 
     def collapsed_theta_gibbs_sample(self, X):
         """
@@ -368,7 +426,64 @@ class LDA(object):
         :param X:
         :return:
         """
-        pass
+
+        K = self.K # number of topics
+        M, V = X.shape
+        alpha = self.alpha
+        lmda = self.lmda
+        topics = np.arange(stop=K)
+
+        #initialize everything uniformly
+        Beta = np.ones(shape=(K, V), dtype=float) / V
+        props = np.zeros(shape=(M, K), dtype=float)
+        #Current state
+        Ns = np.array(range(M), dtype=object)
+
+        #Running sum
+        MC_z = np.array(range(M), dtype=object)
+        MC_beta = np.zeros(shape=(K, V), dtype=float)
+
+        for d in range(M):
+            #allocate topics randomly
+            word_indices = X[d, :].nonzero()[1]
+            random_ks = np.random.choice(topics, size = len(word_indices))
+            Ns[d] = sp.coo_matrix((np.ones(len(word_indices)),
+                                   (word_indices, random_ks)), shape=(V, K)).tocsr()
+            MC_z[d] = sp.coo_matrix((V, K), dtype=np.int8).tocsr()
+
+        for epoch in xrange(10):
+            C = np.zeros((K, V))
+            print "Epoch", epoch
+            for d in np.random.permutation(np.arange(M)):
+                x = X[d]
+                N_d = Ns[d]
+                for v in np.nonzero(x)[1]:
+                    old_z_n = N_d[v, :].nonzero()[1][0]
+                    p = (np.sum(N_d.A, axis=0) -1 + alpha) * Beta[:, v]
+                    p = p.clip(min=0)
+                    p = p/np.sum(p)
+                    z_n = np.random.choice(topics, p = p)
+                    N_d[v, old_z_n] = 0
+                    N_d[v, z_n] = 1
+                Ns[d] = N_d
+                MC_z[d] += N_d
+                C += np.sum(N_d.A, axis=0)
+
+            # Sample beta given all z and thetas
+            c_Beta = C / np.sum(C, axis=1) + lmda
+            for k in topics:
+                c_beta = c_Beta[k, :]
+                Beta[k, :] = np.random.dirichlet(c_beta + lmda)
+            MC_beta += Beta
+
+        for d in range(M):
+            props[d] = MC_z[d].sum(axis=0)
+            props[d] /= np.sum(props[d])
+            MC_z[d] /= MC_z[d].sum(axis=1)
+        MC_beta = (MC_beta.T / np.sum(MC_beta, axis=1)).T
+
+        return props, MC_beta, MC_z
+
 
     def collapsed_gibbs_sample(self, X):
         """
@@ -408,8 +523,8 @@ class LDA(object):
                 N_d = Ns[d]
                 for v in np.nonzero(x)[1]:
                     old_z_n = N_d[v, :].nonzero()[1][0]
-                    p = (np.sum(N_d.A, axis=0) + alpha) *\
-                        ((C[:, v] + lmda) / (C.sum(axis=1) + V*lmda))
+                    p = (np.sum(N_d.A, axis=0) -1 + alpha) *\
+                        ((C[:, v] + -1 + lmda) / (C.sum(axis=1) -V + V*lmda))
                     p = p.clip(min=0)
                     p = p/np.sum(p)
                     z_n = np.random.choice(topics, p = p)
@@ -427,43 +542,7 @@ class LDA(object):
 
         word_props = (C.T / np.sum(C, axis=1)).T
 
-        return MC_z, props, word_props
-
-    def sample_dist(self, X):
-        perplexity = float("inf")
-        K = self.K # number of topics
-        M, V = X.shape
-        alpha = self.alpha
-        lmda = self.lmda
-        nr_terms = X.sum(axis=1)
-        nr_terms = np.array(nr_terms).squeeze()
-
-        # initialize everything randomly
-        beta = np.random.rand(K, V)
-
-        # initialize the parallel processing pool
-        par = Parallel(n_jobs=self.n_jobs, backend="multiprocessing")
-
-        #slice X for multiprocessing
-        slices = get_slices(M, self.n_jobs)
-
-        perplexities = []
-
-        for epoch in xrange(self.nr_em_epochs):
-            print "Epoch: ", epoch
-
-            res = par(delayed(_slice_sample_z)(X[slice, :], beta, alpha) for slice in slices)
-            #assign z_counts
-
-            #sample beta
-
-
-            #update running MC estimate for z for all x
-
-            #update running MC estimate for beta
-
-
-        pass
+        return props, word_props, MC_z
 
     def _m_step(self, beta_acc):
         """

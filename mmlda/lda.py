@@ -351,6 +351,55 @@ class LDA(object):
         
         return return_tuple  # the parameters learned
 
+    def sample_standard(self, X):
+        #initialize everything randomly
+
+        for epoch in xrange(self.nr_em_epochs):
+            for x in X:
+                pass
+                # sample z_n's
+                # set the z_of_x (topic counts in doc)
+
+        # use C_k for beta_k (a matrix of num_topics x size_of_vocab)
+        # use z_of_x's for p_of_z's (a matrix of num_docs x num_topics)
+
+        pass
+    def sample_dist(self, X):
+        perplexity = float("inf")
+        K = self.K # number of topics
+        M, V = X.shape
+        alpha = self.alpha
+        lmda = self.lmda
+        nr_terms = X.sum(axis=1)
+        nr_terms = np.array(nr_terms).squeeze()
+
+        # initialize everything randomly
+        beta = np.random.rand(K, V)
+
+        # initialize the parallel processing pool
+        par = Parallel(n_jobs=self.n_jobs, backend="multiprocessing")
+
+        #slice X for multiprocessing
+        slices = get_slices(M, self.n_jobs)
+
+        perplexities = []
+
+        for epoch in xrange(self.nr_em_epochs):
+            print "Epoch: ", epoch
+
+            res = par(delayed(_slice_sample_z)(X[slice, :], beta, alpha) for slice in slices)
+            #assign z_counts
+
+            #sample beta
+
+
+            #update running MC estimate for z for all x
+
+            #update running MC estimate for beta
+
+
+        pass
+
     def _m_step(self, beta_acc):
         """
         Take the Maximization step of the algorithm
@@ -370,4 +419,6 @@ class LDA(object):
         """
         return np.exp(-log_w/X.sum())
 
+    def _predict(self, p_of_z, beta):
+        return np.sum(beta.T * p_of_z, axis = 1)
 

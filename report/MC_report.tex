@@ -125,9 +125,18 @@ P(z_{n^\prime} = k|z_{\not n^\prime}, x, \alpha, \beta) \propto \beta_{k, x_{n^\
 
 An iteration of the Gibbs Sampler is by sampling from the above distribution for each element in the set, repeatedly in turn.
 
-Recall that we treated $\beta$ as constant, but usually in real world applications, we also don't know it. Since a$\beta_k$ is a parameter of a multinomial, we can model $\beta \sim Dirichlet(\gamma)$. In that case, the above sampling rules for $z_n$s do not change. Given everything, a posteriori $\beta_k$ is $\beta \sim Dirichlet(\gamma + C_k)$, where $C_k$ is a vector of counts over the entire data set (not for a single set as we write when we were deriving the sampling rules for $z_n$'s), $C_{k,v}$ being number of times $v\in \mathcal{X}$ is assigned to cluster $k$. 
+Recall that we treated $\beta$ as constant, but usually we also don't know it. A$\beta_k$ is a parameter of a multinomial over $\mathcal{X}$, and it can conveniently be modelled as $\beta \sim Dirichlet(\gamma)$. It can also be integrated out, and then we only sample $z_n$s. The derivation is almost analogous to what we did in integrating out $\theta$s, and we only show the resulting update rule for completeness:
 
-The sampling procedure that we describe can be efficiently implemented in a MapReduce like environment. Sampling $z_n$'s, for each set, can be performed in parallel in the \textit{map} phase, and then we can sample from $\beta$ in the \textit{reduce} phase.
+\begin{equation*}
+P(z_{n^\prime} = k|z_{\not n^\prime}, x, \alpha, \beta) \propto \frac{C_{k,v}  -1 + \gamma_{v}}{\sum_{ v^{\prime} \in \mathcal{X}}C_{k,v^{\prime}} - 1 + \gamma_{v^{\prime}}} (N_k - 1 + \alpha_k)
+\end{equation*}
+
+where $C_k$ is a vector of counts over the entire data set (not for a single set as we write when we were deriving the sampling rules for $z_n$'s), $C_{k,v}$ being number of times $v\in \mathcal{X}$ is assigned to cluster $k$. Here, $v$ is whatever $x_{n^\prime}$ is. 
+
+Alternatively, we can sample from $\beta_k$s. The previously derived sampling rule for $z_{n^\prime} = k|z_{\not n^\prime}, x, \alpha, \beta$s equally applies to sampling from  $z_{n^\prime} = k|z_{\not n^\prime}, x, \alpha, \beta$ in that case ($ \propto \beta_{k, x_{n^\prime}} (N_k - 1 + \alpha_k).
+$). Sampling from $\beta_k|x,z,\alpha,\gamma$ is trivial: given everything, $\beta_k \sim Dirichlet(\gamma + C_k)$. This is because observing a $z_n = k$ allows us \textit{selecting} the $\beta_k$, and ignoring $\beta_{i}$s ($i\neq k$). This sampling procedure can be efficiently implemented in a MapReduce like environment, since, sampling $z_n$'s, for each set, can be performed in parallel in the \textit{map} phase. Then we can sample from $\beta$ in the \textit{reduce} phase.
+
+The Monte Carlo estimate for $P(z_n)$'s and $P(\beta_k)$s are the empirical averages of our samples.
 
 % that's all folks
 \end{document}

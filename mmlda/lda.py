@@ -11,6 +11,7 @@ import numpy as np
 import scipy.special as spec
 import scipy.stats as stats
 from scipy.misc import logsumexp
+import scipy.sparse as sp
 
 from _lda_helpers import mean_change_2d, mean_change
 from joblib import Parallel, delayed
@@ -351,19 +352,83 @@ class LDA(object):
         
         return return_tuple  # the parameters learned
 
-    def sample_standard(self, X):
-        #initialize everything randomly
 
-        for epoch in xrange(self.nr_em_epochs):
-            for x in X:
-                pass
-                # sample z_n's
-                # set the z_of_x (topic counts in doc)
-
-        # use C_k for beta_k (a matrix of num_topics x size_of_vocab)
-        # use z_of_x's for p_of_z's (a matrix of num_docs x num_topics)
-
+    def gibbs_sample(self, X):
+        """
+        Samples from both \theta, \beta, and z's
+        :param X:
+        :return:
+        """
         pass
+
+    def collapsed_theta_gibbs_sample(self, X):
+        """
+        Samples from \z's and \beta (\theta integrated out)
+        This can be distributed
+        :param X:
+        :return:
+        """
+        pass
+
+    def collapsed_gibbs_sample(self, X):
+        """
+        Samples from z's (both \theta and \beta integrated out)
+        :param X:
+        :return:
+        """
+        K = self.K # number of topics
+        M, V = X.shape
+        alpha = self.alpha
+        lmda = self.lmda
+        topics = np.arange(stop=K)
+
+        #initialize everything uniformly
+        # KxV dense matrix (used like beta)
+
+        C = np.zeros(shape=(K, V), dtype=float) + np.sum(X.A, axis=0)/float(K)
+        props = np.zeros(shape=(M, K), dtype=float)
+
+        #Current state
+        Ns = np.array(range(M), dtype=object)
+        #Running sum
+        MC_z = np.array(range(M), dtype=object)
+
+        for d in range(M):
+            #allocate topics randomly
+            word_indices = X[d, :].nonzero()[1]
+            random_ks = np.random.choice(topics, size = len(word_indices))
+            Ns[d] = sp.coo_matrix((np.ones(len(word_indices)),
+                                   (word_indices, random_ks)), shape=(V, K)).tocsr()
+            MC_z[d] = sp.coo_matrix((V, K), dtype=np.int8).tocsr()
+
+        for epoch in xrange(10):
+            print "Epoch", epoch
+            for d in np.random.permutation(np.arange(M)):
+                x = X[d]
+                N_d = Ns[d]
+                for v in np.nonzero(x)[1]:
+                    old_z_n = N_d[v, :].nonzero()[1][0]
+                    p = (np.sum(N_d.A, axis=0) + alpha) *\
+                        ((C[:, v] + lmda) / (C.sum(axis=1) + V*lmda))
+                    p = p.clip(min=0)
+                    p = p/np.sum(p)
+                    z_n = np.random.choice(topics, p = p)
+                    N_d[v, old_z_n] = 0
+                    N_d[v, z_n] = 1
+                    C[old_z_n, v] -= 1
+                    C[z_n, v] += 1
+                Ns[d] = N_d
+                MC_z[d] += N_d
+
+        for d in range(M):
+            props[d] = MC_z[d].sum(axis=0)
+            props[d] /= np.sum(props[d])
+            MC_z[d] /= MC_z[d].sum(axis=1)
+
+        word_props = (C.T / np.sum(C, axis=1)).T
+
+        return MC_z, props, word_props
+
     def sample_dist(self, X):
         perplexity = float("inf")
         K = self.K # number of topics

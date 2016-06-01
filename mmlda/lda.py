@@ -384,10 +384,10 @@ class LDA(object):
             Ns[d] = sp.coo_matrix((np.ones(len(word_indices)),
                                    (word_indices, random_ks)), shape=(V, K)).tocsr()
             MC_z[d] = sp.coo_matrix((V, K), dtype=np.int8).tocsr()
-            C = np.zeros(shape=(K, V), dtype=float) + np.sum(X.A, axis=0)/float(K)
 
         for epoch in xrange(10):
             print "Epoch", epoch
+            C = np.zeros((K, V))
             for d in np.random.permutation(np.arange(M)):
                 x = X[d]
                 N_d = Ns[d]
@@ -396,12 +396,10 @@ class LDA(object):
                     # sample z given theta and beta (z is independent from other z's given theta):
                     p_z_n = Theta[d, :] * Beta[:, v]
                     p = p_z_n / np.sum(p_z_n)
-                    z_n = np.random.choice(topics, p = p)
+                    z_n = np.random.choice(topics, p=p)
                     N_d[v, old_z_n] = 0
                     N_d[v, z_n] = 1
-                    C[old_z_n, v] -= 1
-                    C[z_n, v] += 1
-
+                C += np.sum(N_d.A, axis=0)
                 # sample theta given z and beta
                 c_theta = (np.sum(N_d.A, axis=0) + alpha)
                 Theta[d, :] = np.random.dirichlet(c_theta)

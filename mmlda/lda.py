@@ -13,7 +13,6 @@ import scipy.stats as stats
 from scipy.misc import logsumexp
 import scipy.sparse as sp
 
-from _lda_helpers import mean_change_2d, mean_change
 from joblib import Parallel, delayed
 
 
@@ -244,7 +243,7 @@ def _doc_update(gammad, beta_ixw, alpha, tol=1e-2, eta_ixw=None):
 
 class LDA(object):
 
-    def __init__(self, K=5, alpha=None, n_jobs=8, nr_em_epochs=10):
+    def __init__(self, K=5, alpha=None, lmda=1, n_jobs=8, nr_em_epochs=10):
         """
         Construct the LDA model (i.e. do not run it yet)
         
@@ -263,6 +262,8 @@ class LDA(object):
         self.alpha = alpha
         if self.alpha is None:
             self.alpha = 1./K
+        self.lmda = lmda
+
         self.K = K
 
         self.n_jobs = n_jobs
@@ -364,7 +365,7 @@ class LDA(object):
         M, V = X.shape
         alpha = self.alpha
         lmda = self.lmda
-        topics = np.arange(stop=K)
+        topics = np.arange(0, K)
 
         #initialize everything uniformly, sparse topics
         Beta = np.ones(shape=(K, V), dtype=float) / V
@@ -399,7 +400,7 @@ class LDA(object):
                     z_n = np.random.choice(topics, p=p)
                     N_d[v, old_z_n] = 0
                     N_d[v, z_n] = 1
-                C += np.sum(N_d.A, axis=0)
+                C = (C.T + np.sum(N_d.A, axis=0)).T
                 # sample theta given z and beta
                 c_theta = (np.sum(N_d.A, axis=0) + alpha)
                 Theta[d, :] = np.random.dirichlet(c_theta)
@@ -407,7 +408,7 @@ class LDA(object):
                 MC_z[d] += N_d
 
             # Sample beta given all z and thetas
-            c_Beta = C / np.sum(C, axis=1) + lmda
+            c_Beta = (C.T / np.sum(C, axis=1) + lmda).T
             for k in topics:
                 c_beta = c_Beta[k, :]
                 Beta[k, :] = np.random.dirichlet(c_beta + lmda)
@@ -429,7 +430,7 @@ class LDA(object):
         M, V = X.shape
         alpha = self.alpha
         lmda = self.lmda
-        topics = np.arange(stop=K)
+        topics = np.arange(0, K)
 
         #initialize everything uniformly
         Beta = np.ones(shape=(K, V), dtype=float) / V
@@ -465,10 +466,10 @@ class LDA(object):
                     N_d[v, z_n] = 1
                 Ns[d] = N_d
                 MC_z[d] += N_d
-                C += np.sum(N_d.A, axis=0)
+                C = (C.T + np.sum(N_d.A, axis=0)).T
 
             # Sample beta given all z and thetas
-            c_Beta = C / np.sum(C, axis=1) + lmda
+            c_Beta = (C.T / np.sum(C, axis=1) + lmda).T
             for k in topics:
                 c_beta = c_Beta[k, :]
                 Beta[k, :] = np.random.dirichlet(c_beta + lmda)
@@ -493,7 +494,7 @@ class LDA(object):
         M, V = X.shape
         alpha = self.alpha
         lmda = self.lmda
-        topics = np.arange(stop=K)
+        topics = np.arange(0, K)
 
         #initialize everything uniformly
         # KxV dense matrix (used like beta)

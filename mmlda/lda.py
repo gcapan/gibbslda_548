@@ -490,7 +490,6 @@ class LDA(object):
 
             # Sample beta given all z and thetas
             c_Beta = (C.T / np.sum(C, axis=1) + lmda).T
-            print c_beta
             for k in topics:
                 c_beta = c_Beta[k, :]
                 Beta[k, :] = np.random.dirichlet(c_beta + lmda)

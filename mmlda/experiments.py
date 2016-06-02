@@ -9,7 +9,7 @@ M = 500
 numwords = 40
 K = 5
 alpha = 1./5
-lmda = 1
+lmda = 1./2
 
 #Top down LDA data
 X = sp.coo_matrix((M, V)).tolil()
@@ -27,28 +27,33 @@ lda = LDA(alpha=alpha, lmda=lmda, nr_em_epochs=5)
 
 print "Collapsed theta, not beta"
 props, word_props, log_Xs, perp = lda.collapsed_theta_gibbs_sample(X)
-plt.plot(range(len(log_Xs)), log_Xs, '*-')
-plt.show()
-
-plt.plot(range(len(perp)), perp, 'o-')
-plt.show()
+# plt.plot(range(len(log_Xs)), log_Xs, '*-')
+# plt.show()
+#
+# plt.plot(range(len(perp)), perp, 'o-')
+# plt.show()
 
 print "No collapsing"
 props, word_props, log_Xs, perp = lda.gibbs_sample(X)
-plt.plot(range(len(log_Xs)), log_Xs, '*-')
-plt.show()
-
-plt.plot(range(len(perp)), perp, 'o-')
-plt.show()
-
+# plt.plot(range(len(log_Xs)), log_Xs, '*-')
+# plt.show()
+#
+# plt.plot(range(len(perp)), perp, 'o-')
+# plt.show()
 
 print "All collapsed"
 props, word_props, log_Xs, perp = lda.collapsed_gibbs_sample(X)
-plt.plot(range(len(log_Xs)), log_Xs, '*-')
-plt.show()
+# plt.plot(range(len(log_Xs)), log_Xs, '*-')
+# plt.show()
+#
+# plt.plot(range(len(perp)), perp, 'o-')
+# plt.show()
 
-plt.plot(range(len(perp)), perp, 'o-')
-plt.show()
+
+
+
+
+
 
 
 

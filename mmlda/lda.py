@@ -160,7 +160,7 @@ def _doc_probability(gammad, beta_ixw, eta_ixw=None):
     p_of_z = stats.dirichlet.mean(gammad)
     return _doc_probability_from_p_of_z(p_of_z, beta_ixw)
 
-def _doc_probability_from_p_of_z(beta_ixw, p_of_z):
+def _doc_probability_from_p_of_z(p_of_z, beta_ixw):
     '''
     Compute p(w_d) whose parameters we know,
     :return: log-probability distribution over words of the document
@@ -389,10 +389,12 @@ class LDA(object):
             word_indices = X[d, :].nonzero()[1]
             random_ks = np.random.choice(topics, size = len(word_indices))
             Ns[d] = sp.coo_matrix((np.ones(len(word_indices)),
-                                   (word_indices, random_ks)), shape=(V, K)).tocsr()
-            MC_z[d] = sp.coo_matrix((V, K), dtype=np.int8).tocsr()
+                                   (word_indices, random_ks)), shape=(V, K)).tolil()
+            MC_z[d] = sp.coo_matrix((V, K), dtype=np.int8).tolil()
 
-        for epoch in xrange(10):
+        log_Xs = []
+        perplexities = []
+        for epoch in xrange(self.nr_em_epochs):
             print "Epoch", epoch
             C = np.zeros((K, V))
             for d in np.random.permutation(np.arange(M)):
@@ -422,7 +424,17 @@ class LDA(object):
             MC_theta += Theta
             MC_beta += Beta
 
-        return MC_theta, MC_beta, MC_z
+            log_X = 0
+            Theta_hat = (MC_theta.T / (np.sum(MC_theta, axis=1))).T
+            Beta_hat = (MC_beta.T / (np.sum(MC_beta, axis = 1))).T
+
+            for d in range(M):
+                ixw = np.nonzero(X[d, :])[1]
+                log_X += np.sum(_doc_probability(Theta_hat[d, :], Beta_hat[:, ixw]))
+
+            log_Xs.append(log_X)
+            perplexities.append(self._perplexity(X, log_X))
+        return Theta_hat, Beta_hat, log_Xs, perplexities
 
     def collapsed_theta_gibbs_sample(self, X):
         """
@@ -453,10 +465,12 @@ class LDA(object):
             word_indices = X[d, :].nonzero()[1]
             random_ks = np.random.choice(topics, size = len(word_indices))
             Ns[d] = sp.coo_matrix((np.ones(len(word_indices)),
-                                   (word_indices, random_ks)), shape=(V, K)).tocsr()
-            MC_z[d] = sp.coo_matrix((V, K), dtype=np.int8).tocsr()
+                                   (word_indices, random_ks)), shape=(V, K)).tolil()
+            MC_z[d] = sp.coo_matrix((V, K)).tolil()
 
-        for epoch in xrange(10):
+        log_Xs = []
+        perplexities =[]
+        for epoch in xrange(self.nr_em_epochs):
             C = np.zeros((K, V))
             print "Epoch", epoch
             for d in np.random.permutation(np.arange(M)):
@@ -481,13 +495,22 @@ class LDA(object):
                 Beta[k, :] = np.random.dirichlet(c_beta + lmda)
             MC_beta += Beta
 
-        for d in range(M):
-            props[d] = MC_z[d].sum(axis=0)
-            props[d] /= np.sum(props[d])
-            MC_z[d] /= MC_z[d].sum(axis=1)
-        MC_beta = (MC_beta.T / np.sum(MC_beta, axis=1)).T
+            log_X = 0
+            Beta_hat = (MC_beta.T / (np.sum(MC_beta, axis = 1))).T
+            for d in range(M):
+                props_d = np.sum(MC_z[d].A, axis=0)
+                props_d /= float(np.sum(props_d))
+                props[d] = props_d
+                ixw = np.nonzero(X[d, :])[1]
+                log_X += np.sum(_doc_probability_from_p_of_z(props_d, Beta_hat[:, ixw]))
 
-        return props, MC_beta, MC_z
+            log_Xs.append(log_X)
+            perplexities.append(self._perplexity(X, log_X))
+
+        for d in range(M):
+            MC_z[d] /= MC_z[d].sum(axis=1)
+
+        return props, Beta_hat, log_Xs, perplexities
 
 
     def collapsed_gibbs_sample(self, X):
@@ -505,32 +528,42 @@ class LDA(object):
         #initialize everything uniformly
         # KxV dense matrix (used like beta)
 
-        C = np.zeros(shape=(K, V), dtype=float) + np.sum(X.A, axis=0)/float(K)
+        C = np.zeros(shape=(K, V), dtype=float)
         props = np.zeros(shape=(M, K), dtype=float)
 
         #Current state
         Ns = np.array(range(M), dtype=object)
         #Running sum
         MC_z = np.array(range(M), dtype=object)
+        MC_c = np.zeros(shape=(K, V), dtype=float)
 
         for d in range(M):
             #allocate topics randomly
             word_indices = X[d, :].nonzero()[1]
             random_ks = np.random.choice(topics, size = len(word_indices))
-            Ns[d] = sp.coo_matrix((np.ones(len(word_indices)),
-                                   (word_indices, random_ks)), shape=(V, K)).tocsr()
-            MC_z[d] = sp.coo_matrix((V, K), dtype=np.int8).tocsr()
+            N_d = sp.coo_matrix((np.ones(len(word_indices)),
+                                   (word_indices, random_ks)), shape=(V, K)).tolil()
+            C = C + np.sum(N_d.A, axis=1)
+            Ns[d] = N_d
+            MC_z[d] = sp.coo_matrix((V, K)).tolil()
 
-        for epoch in xrange(10):
+        log_Xs = []
+        perplexities = []
+        for epoch in xrange(self.nr_em_epochs):
             print "Epoch", epoch
             for d in np.random.permutation(np.arange(M)):
                 x = X[d]
                 N_d = Ns[d]
                 for v in np.nonzero(x)[1]:
                     old_z_n = N_d[v, :].nonzero()[1][0]
-                    p = (np.sum(N_d.A, axis=0) -1 + alpha) *\
-                        ((C[:, v] + -1 + lmda) / (C.sum(axis=1) -V + V*lmda))
-                    p = p.clip(min=0)
+
+                    except_v = [v_prime for v_prime in np.nonzero(x)[1] if v_prime != v]
+                    N_d_except_v = N_d[except_v, :]
+                    C_except_v = np.copy(C[:, v])
+                    C_except_v[old_z_n] = C_except_v[old_z_n] - 1
+
+                    p = (np.sum(N_d_except_v.A, axis=0) + alpha) *\
+                        ((C_except_v + lmda) / (np.sum(C, axis=1) -1 + V*lmda))
                     p = p/np.sum(p)
                     z_n = np.random.choice(topics, p = p)
                     N_d[v, old_z_n] = 0
@@ -539,15 +572,20 @@ class LDA(object):
                     C[z_n, v] += 1
                 Ns[d] = N_d
                 MC_z[d] += N_d
+            MC_c += C
+            word_props = (MC_c.T / np.sum(MC_c, axis=1)).T
+            log_X = 0
+            for d in range(M):
+                props_d = np.sum(MC_z[d].A, axis=0)
+                props_d /= float(np.sum(props_d))
+                props[d] = props_d
+                ixw = np.nonzero(X[d, :])[1]
+                log_X += np.sum(_doc_probability_from_p_of_z(props_d, word_props[:, ixw]))
+            log_Xs.append(log_X)
+            perplexities.append(self._perplexity(X, log_X))
 
-        for d in range(M):
-            props[d] = MC_z[d].sum(axis=0)
-            props[d] /= np.sum(props[d])
-            MC_z[d] /= MC_z[d].sum(axis=1)
 
-        word_props = (C.T / np.sum(C, axis=1)).T
-
-        return props, word_props, MC_z
+        return props, word_props, log_Xs, perplexities
 
     def _m_step(self, beta_acc):
         """

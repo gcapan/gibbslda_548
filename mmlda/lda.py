@@ -388,9 +388,12 @@ class LDA(object):
             #allocate topics randomly -- this is really not needed in this case
             word_indices = X[d, :].nonzero()[1]
             random_ks = np.random.choice(topics, size = len(word_indices))
+            Theta[d] = np.random.dirichlet(np.ones(K)*alpha)
             Ns[d] = sp.coo_matrix((np.ones(len(word_indices)),
                                    (word_indices, random_ks)), shape=(V, K)).tolil()
             MC_z[d] = sp.coo_matrix((V, K), dtype=np.int8).tolil()
+        for k in topics:
+            Beta[k] = np.random.dirichlet(np.ones(V)*lmda)
 
         log_Xs = []
         perplexities = []
@@ -416,9 +419,9 @@ class LDA(object):
                 MC_z[d] += N_d
 
             # Sample beta given all z and thetas
-            c_Beta = (C.T / np.sum(C, axis=1) + lmda).T
+            # c_Beta = (C.T / np.sum(C, axis=1) + lmda).T
             for k in topics:
-                c_beta = c_Beta[k, :]
+                c_beta = C[k, :]
                 Beta[k, :] = np.random.dirichlet(c_beta + lmda)
 
             MC_theta += Theta
@@ -453,6 +456,9 @@ class LDA(object):
 
         #initialize everything uniformly
         Beta = np.ones(shape=(K, V), dtype=float) / V
+        for k in topics:
+            Beta[k] = np.random.dirichlet(np.ones(V)*lmda)
+
         props = np.zeros(shape=(M, K), dtype=float)
         #Current state
         Ns = np.array(range(M), dtype=object)
@@ -492,9 +498,9 @@ class LDA(object):
                 C = C + N_d.A.T
 
             # Sample beta given all z and thetas
-            c_Beta = (C.T / np.sum(C, axis=1) + lmda).T
+            #c_Beta = (C.T / np.sum(C, axis=1) + lmda).T
             for k in topics:
-                c_beta = c_Beta[k, :]
+                c_beta = C[k, :]
                 Beta[k, :] = np.random.dirichlet(c_beta + lmda)
             MC_beta += Beta
 
@@ -510,9 +516,6 @@ class LDA(object):
             log_Xs.append(log_X)
             print log_X
             perplexities.append(self._perplexity(X, log_X))
-
-        for d in range(M):
-            MC_z[d] /= MC_z[d].sum(axis=1)
 
         return props, Beta_hat, log_Xs, perplexities
 

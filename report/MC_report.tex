@@ -155,7 +155,7 @@ There are, indeed, other alternatives to implement LDA efficiently in a distribu
 We implemented the 3 variants of the Gibbs sampler (collapsed, non-collapsed, $\theta$-collapsed) as described in the previous section. The experiments are conducted on synthetic data, \textit{forward sampled} from the described generative model. What we report is the evidence, the joint probability of sets (the denominator of the posterior). We report the algorithm listings and the results in the poster. 
 
 \section{Conclusion}
-We conclude that per our experiments, collapsing $\beta$  greatly helps with faster convergence. This is perhaps due to: i) rather than sampling from a very high-dimensional probability distribution, integrating it out analytically, ii) updating counts as we sample $z$s, rather than doing this once after sampling all $z$s. However, we do not make a definitive statement, due to our inaccessibility to reference implementations for the variants we tried. Collapsed Gibbs Sampler seems to be choice of implementation in almost all available software packages (in accordance with our results).
+We conclude that per our experiments, collapsing $\beta$ helps with faster convergence. This is perhaps due to: i) rather than sampling from a very high-dimensional probability distribution, integrating it out analytically, ii) updating counts as we sample $z$s, rather than doing this once after sampling all $z$s. However, we do not make a definitive statement, due to our inaccessibility to reference implementations for the variants we tried. Collapsed Gibbs Sampler seems to be choice of implementation in almost all available software packages (in accordance with our results).
 \bibliography{bibl}
 \bibliographystyle{plain}
 

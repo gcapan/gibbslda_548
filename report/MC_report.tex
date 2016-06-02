@@ -18,7 +18,7 @@
 \maketitle
 
 \section{Introduction}
-A plausible way to model sets of discrete variables, such as, a document of occurring words, log data associated to a person, and so on, is via mixed membership. In these models, we assume an overall membership proportion parameter for the set. Later, we say that each observed element comes from a multinomial distribution indexed by its latent, membership variable. This latent variable is drawn from the membership proportion parameter. 
+A plausible way to model sets of discrete variables, such as, \textit{a document of occurring words}, \textit{log data associated to a person}, and so on, is via mixed membership. In these models, we assume an overall membership proportion parameter for the set, to a fixed number of clusters. Later, we say that each observed element comes from a multinomial distribution indexed by its latent cluster variable, which makes mixed membership different from clustering (where we assume all elements come from a single cluster). The latent variable is drawn from the membership proportion parameter.
 
 Latent Dirichlet Allocation \cite{blei2003lda} is a way to model these kinds of data (and various related models exist, perhaps most notably nonnegative matrix factorization\cite{cemgil2009nmf}). In a Bayesian Network representation, the graphical model is as follows:
 \begin{figure}[h]
@@ -58,7 +58,7 @@ Latent Dirichlet Allocation \cite{blei2003lda} is a way to model these kinds of 
 			\item For each observation (an element of the set)
 			\begin{enumerate}
 				\item Membership variable is drawn ($z_n \sim Multinomial(\theta)$)
-				\item The discrete observation is drawn from ($x_n \sim Multinomial(\beta_{z_n})$)
+				\item The discrete observation is drawn ($x_n \sim Multinomial(\beta_{z_n})$)
 			\end{enumerate}
 		\end{enumerate}
 	\end{enumerate}
@@ -87,7 +87,9 @@ P(x_{new}|x, \alpha, \beta) = \int d\theta \sum_z P(x_{new}|z, \beta_z), P(z, \t
 \end{equation*}
 
 \section{Sampling From $z$s and $\beta$s}
-Let $z$ be the sequence of membership variables, indexed in the same way with $x_n$'s associated with (the elements) a set $x$. Computing $P(z|x, \alpha, \beta)$ helps with prediction: We later can find $P(z_{new}|z)$. Given its $z_{new}$, the possible observation is independent from the membership proportions, so we can compute the predictive distribution by simply combining $P(z_{new}|z)$ with associated $\beta$. Computing $P(z|x, \alpha, \beta)$ requires integrating out $\theta$ from the posterior distribution. Here we will show how to integrate out $\theta$ from the joint  $P(z, x, \theta|\alpha, \beta)$ (avoiding the intractable normalizing constant), and then we will use the fact that $P(z, x|\alpha, \beta) \propto P(z|\alpha, \beta)$ to sample from $z$ \textit{a posteriori}. Recall that $z$ is multinomial, and a straightforward way to sample from it is with Gibbs Sampling, and the approach we take here, by integrating out $\theta$ is known as \textit{Collapsed Gibbs Sampling}.
+Let $z$ be the sequence of membership variables, indexed in the same way with $x_n$'s associated with (the elements of) a set $x$. Computing $P(z|x, \alpha, \beta)$ helps with prediction: We later can find $P(z_{new}|z)$. Given its $z_{new}$, the possible observation is independent from the membership proportions, so we can compute the predictive distribution by simply combining $P(z_{new}|z)$ with associated $\beta$. 
+
+Computing $P(z|x, \alpha, \beta)$ requires integrating out $\theta$ from the posterior distribution. Here, we will show how to integrate out $\theta$ from the joint  $P(z, x, \theta|\alpha, \beta)$ (avoiding the intractable normalizing constant), and then we will use the fact that $P(z, x|\alpha, \beta) \propto P(z|x, \alpha, \beta)$ to sample from $z$ \textit{a posteriori}. Recall that $z$ is multinomial, and a straightforward way to sample from it is with Gibbs Sampling, and the approach we take here, by integrating out $\theta$ is known as \textit{Collapsed Gibbs Sampling}.
 
 The derivations are partly due to Wikipedia entry for Latent Dirichlet Allocation\footnote{https://en.wikipedia.org/wiki/Latent\_Dirichlet\_allocation\#Inference}. Let's first write $P(z, x|\alpha, \beta)$. We will denote number of assignments in the set to a cluster $i$ with $N_i$:
 \begin{align*}
@@ -133,12 +135,9 @@ P(z_{n^\prime} = k|z_{\not n^\prime}, x, \alpha, \beta) \propto \frac{C_{k,v}  -
 
 where $C_k$ is a vector of counts over the entire data set (not for a single set as we write when we were deriving the sampling rules for $z_n$'s), $C_{k,v}$ being number of times $v\in \mathcal{X}$ is assigned to cluster $k$. Here, $v$ is whatever $x_{n^\prime}$ is. 
 
-Alternatively, we can sample from $\beta_k$s. The previously derived sampling rule for $z_{n^\prime} = k|z_{\not n^\prime}, x, \alpha, \beta$s equally applies to sampling from  $z_{n^\prime} = k|z_{\not n^\prime}, x, \alpha, \beta$ in that case ($ \propto \beta_{k, x_{n^\prime}} (N_k - 1 + \alpha_k).
-$). Sampling from $\beta_k|x,z,\alpha,\gamma$ is trivial: given everything, $\beta_k \sim Dirichlet(\gamma + C_k)$. This is because observing a $z_n = k$ allows us \textit{selecting} the $\beta_k$, and ignoring $\beta_{i}$s ($i\neq k$). 
+Alternatively, we can sample from $\beta_k$s. The previously derived sampling rule for $z_{n^\prime} = k|z_{\not n^\prime}, x, \alpha, \beta$s equally applies to sampling from  $z_{n^\prime} = k|z_{\not n^\prime}, x, \alpha, \beta$ in that case ($ \propto \beta_{k, x_{n^\prime}} (N_k - 1 + \alpha_k)$). Sampling from $\beta_k|x,z,\alpha,\gamma$ is trivial: given everything, $\beta_k \sim Dirichlet(\gamma + C_k)$. This is because observing a $z_n = k$ allows us \textit{selecting} the $\beta_k$, and ignoring $\beta_{i}$s ($i\neq k$). 
 
-One reason for \textit{not} collapsing $\beta_k$s might be that it makes $z$ updates independent. When sampling, following the order of first sampling all$z$s and then sampling $\beta$s makes the algorithm somewhat suitable to distributed processing environments such as  MapReduce (\cite{dean2008mapreduce}): sampling $z_n$'s, for each set, can be performed in parallel in the \textit{map} phase. Then we can sample from $\beta$ in the \textit{reduce} phase. This approach is also mentioned in \cite{newman2009distributed}. This procedure might be an option when the number of sets (documents, for instance) is huge, or already partitioned. Notice, however, its also introduces a communication cost: counts calculated by the independent processes should be accumulated to sample from $\beta$s. Additionally, this is expected to converge slower (in terms of iterations) than the fully collapsed sampler. This is also what we find in our experiments. In the latter case, we update the counts in place. There are, of course, other alternatives to implement LDA efficiently in a distributed environment, such as \cite{newman2009distributed, smyth2009asynchronous}. They vary in their approaches of making distributed computations more efficient: leveraging sparsity of data, careful partitioning of data so that the communication is minimal,  asynchronous updates from local counts, and so on. 
-
-Finally, we write here a third alternative way of Gibbs Sampler update rules: sampling all $z_n$s, $\theta$s, and $\beta$s (nothing is integrated out):
+Finally, we write here a third alternative way of Gibbs Sampling update rules: sampling all $z_n$s, $\theta$s, and $\beta$s (nothing is integrated out):
 \begin{align*}
 z_{n^\prime}|z_{\not n^\prime},\theta,\beta \sim& P(z_{n^\prime}|\theta) P(x_{n^\prime}|z_{n^\prime}, \beta) \\
 \theta|Z, \beta \sim& Dirichlet(\alpha + [N_1, N_2, \dots N_K])\\
@@ -146,6 +145,11 @@ z_{n^\prime}|z_{\not n^\prime},\theta,\beta \sim& P(z_{n^\prime}|\theta) P(x_{n^
 \end{align*}
 
 The Monte Carlo estimate for $P(z_n)$'s and $P(\beta_k)$s are the empirical averages of our samples.
+
+One reason for \textit{not} collapsing $\beta_k$s might be that it makes $z$ updates independent. When sampling, following the order of first sampling all $z$s and then sampling $\beta$s makes the algorithm somewhat suitable to distributed processing environments such as  MapReduce\cite{dean2008mapreduce}: sampling $z_n$'s, for each set, can be performed in parallel in the \textit{map} phase. Then we can sample from $\beta$ in the \textit{reduce} phase. This approach is also mentioned in \cite{newman2009distributed}. This procedure might be an option when the number of sets (documents, for instance) is huge, or the sets are already partitioned. Notice, however, its also introduces a communication cost: counts calculated by the independent processes should be accumulated to sample from $\beta$s. Additionally, this is expected to converge slower (in terms of iterations) than the fully collapsed sampler. This is also what we find in our experiments. In the latter case, we update the counts in place. 
+
+There are, indeed, other alternatives to implement LDA efficiently in a distributed environment, such as \cite{newman2009distributed, smyth2009asynchronous}. They tend to keep the sampling collapsed, and generally vary in their approaches of making distributed computations more efficient: leveraging sparsity of data, careful partitioning of data so that the communication is minimal,  asynchronous updates from local counts, and so on. 
+
 
 \section{Experiments}
 We implemented the 3 variants of the Gibbs sampler (collapsed, non-collapsed, $\theta$-collapsed) as described in the previous section. The experiments are conducted on synthetic data, \textit{forward sampled} from the described generative model. What we report is the evidence, the joint probability of sets (the denominator of the posterior). We report the algorithm listings and the results in the poster. 

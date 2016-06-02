@@ -408,7 +408,7 @@ class LDA(object):
                     z_n = np.random.choice(topics, p=p)
                     N_d[v, old_z_n] = 0
                     N_d[v, z_n] = 1
-                C = (C.T + np.sum(N_d.A, axis=0)).T
+                C = C + np.sum(N_d.A, axis=1)
                 # sample theta given z and beta
                 c_theta = (np.sum(N_d.A, axis=0) + alpha)
                 Theta[d, :] = np.random.dirichlet(c_theta)
@@ -486,10 +486,11 @@ class LDA(object):
                     N_d[v, z_n] = 1
                 Ns[d] = N_d
                 MC_z[d] += N_d
-                C = (C.T + np.sum(N_d.A, axis=0)).T
+                C = C + np.sum(N_d.A, axis=1)
 
             # Sample beta given all z and thetas
             c_Beta = (C.T / np.sum(C, axis=1) + lmda).T
+            print c_beta
             for k in topics:
                 c_beta = c_Beta[k, :]
                 Beta[k, :] = np.random.dirichlet(c_beta + lmda)

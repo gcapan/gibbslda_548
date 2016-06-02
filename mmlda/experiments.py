@@ -23,15 +23,15 @@ for d in range(M):
         w_n = np.random.choice(np.arange(V), p=beta[z, :])
         X[d, w_n] += 1
 
-lda = LDA(alpha=alpha, lmda=lmda, nr_em_epochs=5)
-
-print "Collapsed theta, not beta"
-props, word_props, log_Xs, perp = lda.collapsed_theta_gibbs_sample(X)
+lda = LDA(alpha=alpha, lmda=lmda, nr_em_epochs=2)
+print "All collapsed"
+props, word_props, log_Xs, perp = lda.collapsed_gibbs_sample(X)
 plt.plot(range(len(log_Xs)), log_Xs, '*-')
 plt.show()
 
 plt.plot(range(len(perp)), perp, 'o-')
 plt.show()
+
 
 print "No collapsing"
 props, word_props, log_Xs, perp = lda.gibbs_sample(X)
@@ -42,13 +42,16 @@ plt.plot(range(len(perp)), perp, 'o-')
 plt.show()
 
 
-print "All collapsed"
-props, word_props, log_Xs, perp = lda.collapsed_gibbs_sample(X)
+print "Collapsed theta, not beta"
+props, word_props, log_Xs, perp = lda.collapsed_theta_gibbs_sample(X)
 plt.plot(range(len(log_Xs)), log_Xs, '*-')
 plt.show()
 
 plt.plot(range(len(perp)), perp, 'o-')
 plt.show()
+
+
+
 
 
 

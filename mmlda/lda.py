@@ -408,7 +408,7 @@ class LDA(object):
                     z_n = np.random.choice(topics, p=p)
                     N_d[v, old_z_n] = 0
                     N_d[v, z_n] = 1
-                C = C + np.sum(N_d.A, axis=1)
+                C = C + N_d.A.T
                 # sample theta given z and beta
                 c_theta = (np.sum(N_d.A, axis=0) + alpha)
                 Theta[d, :] = np.random.dirichlet(c_theta)
@@ -486,7 +486,7 @@ class LDA(object):
                     N_d[v, z_n] = 1
                 Ns[d] = N_d
                 MC_z[d] += N_d
-                C = C + np.sum(N_d.A, axis=1)
+                C = C + N_d.A.T
 
             # Sample beta given all z and thetas
             c_Beta = (C.T / np.sum(C, axis=1) + lmda).T
@@ -543,7 +543,7 @@ class LDA(object):
             random_ks = np.random.choice(topics, size = len(word_indices))
             N_d = sp.coo_matrix((np.ones(len(word_indices)),
                                    (word_indices, random_ks)), shape=(V, K)).tolil()
-            C = C + np.sum(N_d.A, axis=1)
+            C = C + N_d.A.T
             Ns[d] = N_d
             MC_z[d] = sp.coo_matrix((V, K)).tolil()
 
@@ -572,6 +572,7 @@ class LDA(object):
                     C[z_n, v] += 1
                 Ns[d] = N_d
                 MC_z[d] += N_d
+
             MC_c += C
             word_props = (MC_c.T / np.sum(MC_c, axis=1)).T
             log_X = 0

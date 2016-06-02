@@ -91,8 +91,8 @@ Let $z$ be the sequence of membership variables, indexed in the same way with $x
 
 Let's first write $P(z, x|\alpha, \beta)$. We will denote number of assignments in the set to a cluster $i$ with $N_i$:
 \begin{align*}
-P(z, x|\alpha, \beta) =& \int d\theta \prod_{i=1}^K P(\theta|\alpha) \prod_{n=1}^{N} P(z_n |\theta) P(x_n|\beta_{z_n}) d\theta\\
-=&  \prod_{n=1}^{N} P(x_n|\beta_{z_n})  \int d\theta \prod_{i=1}^K P(\theta|\alpha) \prod_{n=1}^{N} P(z_n |\theta) d\theta\\
+P(z, x|\alpha, \beta) =& \int d\theta P(\theta|\alpha) \prod_{n=1}^{N} P(z_n |\theta) P(x_n|\beta_{z_n}) d\theta\\
+=&  \prod_{n=1}^{N} P(x_n|\beta_{z_n})  \int d\theta P(\theta|\alpha) \prod_{n=1}^{N} P(z_n |\theta) d\theta\\
 =&  \prod_{n=1}^{N} P(x_n|\beta_{z_n}) \int d\theta \frac{\Gamma(\sum_{i=1}^K \alpha_i)}{\prod_{i=1}^K \Gamma(\alpha_i)}  \prod_{i=1}^K\theta_i^{\alpha_i - 1} \prod_{n=1}^N \prod_{i=1}^K \theta_i^{[z_n = i]}\\
 =& \prod_{n=1}^{N} P(x_n|\beta_{z_n})   \int d\theta \frac{\Gamma(\sum_{i=1}^K \alpha_i)}{\prod_{i=1}^K \Gamma(\alpha_i)} \prod_{i=1}^K\theta_i^{\alpha_i - 1} \prod_{i=1}^K \theta_i^{N_i}\\
 =& \prod_{n=1}^{N} P(x_n|\beta_{z_n})  \int d\theta \frac{\Gamma(\sum_{i=1}^K \alpha_i)}{\prod_{i=1}^K \Gamma(\alpha_i)}  \prod_{i=1}^K \theta_i^{N_i + \alpha_i -1}\\

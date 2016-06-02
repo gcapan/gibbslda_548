@@ -194,14 +194,14 @@ The Bayesian network representation encodes the following generative model:
 
 For the experiments, we sample a data set from the LDA generative model assuming 500 documents, 1000 terms with 40 terms per document. We further take an exchangeable Dirichlet topic prior with $\alpha = 1/K$ while $K = 5$. 
 
-We run all three algorithms on the data set, namely the full Gibbs sampler, Gibbs sampler with collapsed $\theta$, and fully collapsed Gibbs sampler. On a single CPU, for 10 epochs, the algorithms take 2min 45s, 5min 29s and 6min 8s in wall-clock time respectively.
+We run all three algorithms on the data set, namely the full Gibbs sampler, Gibbs sampler with collapsed $\theta$, and fully collapsed Gibbs sampler. On a single CPU, for 10 epochs, the algorithms take 4min 30s, 8min 12s and 8min 26s in wall-clock time respectively.
 
 \vspace{2cm}
 \begin{minipage}{\linewidth}
 	\centering
 	\captionof{figure}{Experiment Results}
 	\label{fig:results}
-	\includegraphics{results}
+	\includegraphics{results2}
 \end{minipage}
 
 

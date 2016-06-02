@@ -7,6 +7,9 @@
 \usepackage{amsmath}
 \usepackage{amsfonts}
 
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
 \begin{document}
 
 \title{Gibbs Sampling for Latent Dirichlet Allocation}
@@ -144,6 +147,7 @@ z_{n^\prime}|z_{\not n^\prime},\theta,\beta \sim& P(z_{n^\prime}|\theta) P(x_{n^
 \end{align*}
 
 The Monte Carlo estimate for $P(z_n)$'s and $P(\beta_k)$s are the empirical averages of our samples.
+
 
 % that's all folks
 \end{document}

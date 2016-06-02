@@ -58,7 +58,7 @@
 \begin{abstract}
 
 \large{
-We study Gibbs sampling for Latent Dirichlet Allocation (LDA), a mixed-membership model relevant in topic modeling in natural language processing, as well as other applications such as collaborative filtering. We derive a full Gibbs sampler, as well as two other variants collapsing out the document-topic prior $\theta$, and further integrating out $\beta$. We implement all algorithms and compare their performance on a synthetic data set drawn from the LDA generative model. 
+We study Gibbs sampling for Latent Dirichlet Allocation (LDA), a mixed-membership model relevant in topic modeling in natural language processing, as well as other applications such as collaborative filtering. We derive a full Gibbs sampler, as well as two other variants collapsing out the document-topic prior $\theta$, and further integrating out the term-topic prior $\beta$. We implement all algorithms and compare their performance on a synthetic data set drawn from the LDA generative model. 
 }
 
 \end{abstract}
@@ -189,6 +189,21 @@ The Bayesian network representation encodes the following generative model:
 		\EndFunction
 	\end{algorithmic}
 \end{minipage}
+
+\section{Experiments}
+
+For the experiments, we sample a data set from the LDA generative model assuming 500 documents, 1000 terms with 40 terms per document. We further take an exchangeable Dirichlet topic prior with $\alpha = 1/K$ while $K = 5$. 
+
+We run all three algorithms on the data set, namely the full Gibbs sampler, Gibbs sampler with collapsed $\theta$, and fully collapsed Gibbs sampler. On a single CPU, for 10 epochs, the algorithms take 2min 45s, 5min 29s and 6min 8s in wall-clock time respectively.
+
+\vspace{2cm}
+\begin{minipage}{\linewidth}
+	\centering
+	\captionof{figure}{Experiment Results}
+	\label{fig:results}
+	\includegraphics{results}
+\end{minipage}
+
 
 
 

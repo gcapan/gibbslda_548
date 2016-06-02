@@ -433,6 +433,7 @@ class LDA(object):
                 log_X += np.sum(_doc_probability(Theta_hat[d, :], Beta_hat[:, ixw]))
 
             log_Xs.append(log_X)
+            print log_X
             perplexities.append(self._perplexity(X, log_X))
         return Theta_hat, Beta_hat, log_Xs, perplexities
 
@@ -463,7 +464,9 @@ class LDA(object):
         for d in range(M):
             #allocate topics randomly
             word_indices = X[d, :].nonzero()[1]
-            random_ks = np.random.choice(topics, size = len(word_indices))
+            p = np.random.dirichlet(np.ones(K) * alpha)
+            #TODO: Remove the p argument to get completely random topic assignments
+            random_ks = np.random.choice(topics, size=len(word_indices), p=p)
             Ns[d] = sp.coo_matrix((np.ones(len(word_indices)),
                                    (word_indices, random_ks)), shape=(V, K)).tolil()
             MC_z[d] = sp.coo_matrix((V, K)).tolil()
@@ -505,6 +508,7 @@ class LDA(object):
                 log_X += np.sum(_doc_probability_from_p_of_z(props_d, Beta_hat[:, ixw]))
 
             log_Xs.append(log_X)
+            print log_X
             perplexities.append(self._perplexity(X, log_X))
 
         for d in range(M):
@@ -538,9 +542,11 @@ class LDA(object):
         MC_c = np.zeros(shape=(K, V), dtype=float)
 
         for d in range(M):
-            #allocate topics randomly
+            #allocate topics from prior
             word_indices = X[d, :].nonzero()[1]
-            random_ks = np.random.choice(topics, size = len(word_indices))
+            p = np.random.dirichlet(np.ones(K) * alpha)
+            #TODO: Remove the p argument to get completely random topic assignments
+            random_ks = np.random.choice(topics, size=len(word_indices), p=p)
             N_d = sp.coo_matrix((np.ones(len(word_indices)),
                                    (word_indices, random_ks)), shape=(V, K)).tolil()
             C = C + N_d.A.T
@@ -582,7 +588,9 @@ class LDA(object):
                 props[d] = props_d
                 ixw = np.nonzero(X[d, :])[1]
                 log_X += np.sum(_doc_probability_from_p_of_z(props_d, word_props[:, ixw]))
+
             log_Xs.append(log_X)
+            print log_X
             perplexities.append(self._perplexity(X, log_X))
 
 

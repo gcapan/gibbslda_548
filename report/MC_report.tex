@@ -147,8 +147,11 @@ z_{n^\prime}|z_{\not n^\prime},\theta,\beta \sim& P(z_{n^\prime}|\theta) P(x_{n^
 
 The Monte Carlo estimate for $P(z_n)$'s and $P(\beta_k)$s are the empirical averages of our samples.
 
-\subsection{Experiments}
+\section{Experiments}
 We implemented the 3 variants of the Gibbs sampler (collapsed, non-collapsed, $\theta$-collapsed) as described in the previous section. The experiments are conducted on synthetic data, top-down sampled from the described generative model. What we report is the evidence, the joint probability of sets (the denominator of the posterior). We report the algorithm listings and the results in the poster. 
+
+\section{Conclusion}
+We conclude that per our experiments, collapsing $\beta$  greatly helps with faster convergence. This is perhaps due to rather than sampling from a very high-dimensional probability distribution, integrating it out analytically. However, we do not make a definitive statement, due to our inaccessibility to the reference implementations for the variants we tried. Collapsed Gibbs Sampler seems to be choice of implementation in almost all available software packages (in accordance with our results).
 \bibliography{bibl}
 \bibliographystyle{plain}
 

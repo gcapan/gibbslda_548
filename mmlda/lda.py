@@ -152,14 +152,20 @@ def _doc_lowerbound(phi, gamma, beta_ixw, alpha, eta_ixw = None):
 
     return bound
 
-
 def _doc_probability(gammad, beta_ixw, eta_ixw=None):
     '''
     Compute p(w_d) whose parameters we know,
     :return: log-probability distribution over words of the document
     '''
+    p_of_z = stats.dirichlet.mean(gammad)
+    return _doc_probability_from_p_of_z(p_of_z, beta_ixw)
 
-    pw = np.sum(beta_ixw.T * stats.dirichlet.mean(gammad), axis = 1)
+def _doc_probability_from_p_of_z(beta_ixw, p_of_z):
+    '''
+    Compute p(w_d) whose parameters we know,
+    :return: log-probability distribution over words of the document
+    '''
+    pw = np.sum(beta_ixw.T * p_of_z, axis=1)
     return np.log(pw)
 
 def _heldout_doc_probability(alpha, beta_ixw, eta_ixw = None):

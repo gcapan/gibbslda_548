@@ -55,13 +55,12 @@
 
 
 
-\begin{abstract}
+\subsection*{Abstract}
 
 \large{
-We study Gibbs sampling for Latent Dirichlet Allocation (LDA), a mixed-membership model relevant in topic modeling in natural language processing, as well as other applications such as collaborative filtering. We derive a full Gibbs sampler, as well as two other variants collapsing out the document-topic prior $\theta$, and further integrating out the term-topic prior $\beta$. We implement all algorithms and compare their performance on a synthetic data set drawn from the LDA generative model. 
+We study Gibbs sampling for Latent Dirichlet Allocation (LDA), a mixed-membership model relevant in topic modeling in natural language processing, as well as other applications such as collaborative filtering \cite{blei2003lda,griffiths2004collapsed}. We derive a full Gibbs sampler, as well as two other variants collapsing out the document-topic prior $\theta$, and further integrating out the term-topic prior $\beta$. We implement all algorithms and compare their performance on a synthetic data set drawn from the LDA generative model. 
 }
 
-\end{abstract}
 
 %----------------------------------------------------------------------------------------
 %	INTRODUCTION
@@ -229,7 +228,7 @@ We observe that the fully collapsed variant seems to yield the best result, and 
 
 %\nocite{*} % Print all references regardless of whether they were cited in the poster or not
 \bibliographystyle{plain} % Plain referencing style
-\bibliography{../report/zotero} % Use the example bibliography file sample.bib
+\bibliography{../report/bibl} % Use the example bibliography file sample.bib
 
 %----------------------------------------------------------------------------------------
 %	ACKNOWLEDGEMENTS

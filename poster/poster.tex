@@ -194,17 +194,17 @@ The Bayesian network representation encodes the following generative model:
 
 For the experiments, we sample a data set from the LDA generative model assuming 500 documents, 1000 terms with 40 terms per document. We further take an exchangeable Dirichlet topic prior with $\alpha = 1/K$ while $K = 5$. 
 
-We run all three algorithms on the data set, namely the full Gibbs sampler, Gibbs sampler with collapsed $\theta$, and fully collapsed Gibbs sampler. On a single CPU, for 10 epochs, the algorithms take 4min 30s, 8min 12s and 8min 26s in wall-clock time respectively.
+We run all three algorithms on the data set, namely the full Gibbs sampler, Gibbs sampler with collapsed $\theta$, and fully collapsed Gibbs sampler. On a single CPU, for 50 epochs, the algorithms take 10min 48s, 15min 40s and 18min 5s in wall-clock time respectively.
 
 \vspace{2cm}
 \begin{minipage}{\linewidth}
 	\centering
 	\captionof{figure}{Experiment Results}
 	\label{fig:results}
-	\includegraphics{results2}
+	\includegraphics{results3}
 \end{minipage}
 
-
+We observe that the fully collapsed variant seems to yield the best result, and also faster improvements to the perplexity over the number of epochs. 
 
 
 %----------------------------------------------------------------------------------------
@@ -213,9 +213,15 @@ We run all three algorithms on the data set, namely the full Gibbs sampler, Gibb
 
 \section{Conclusion}
 
-We have introduced Bayesian logistic regression. We covered the basic formulation of the method, and moved on to introduce its Bayesian interpretation. We then gave some common priors used in the problem, and discussed MAP estimation. Finally, for approximate inference, we covered Laplace approximation. We concluded that Bayesian logistic regression with priors used purely in a regularization sense does lead to gain in accuracy in text classification, but not to a great extent.
-
-This study left out discussions related to variational methods and Bayesian inference, since they were not directly relevant to the application. They can be the focus of a future study on the subject. For the text classification problem, we can also experiment with more informative priors reflecting prior beliefs on language (such as larger dispersion on longer words). Finally, this study directly tokenizes the text in a bag-of-words manner. The accuracy can be increased significantly with syntactic and morphological parsing of the language.
+\large{
+\begin{itemize}
+	\item Gibbs sampler is a viable, if not better alternative to variational inference for LDA. 
+	\item By different sets of variables to integrate out, we can introduce different collapsed Gibbs sampler
+		variants.
+	\item Among these, the fully collapsed sampler seems to yield the best performance. This is in line
+		with the literature.
+\end{itemize}
+}
 
  %----------------------------------------------------------------------------------------
 %	REFERENCES

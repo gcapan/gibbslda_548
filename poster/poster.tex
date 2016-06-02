@@ -58,7 +58,7 @@
 \subsection*{Abstract}
 
 \large{
-We study Gibbs sampling for Latent Dirichlet Allocation (LDA), a mixed-membership model relevant in topic modeling in natural language processing, as well as other applications such as collaborative filtering \cite{blei2003lda,griffiths2004collapsed}. We derive a full Gibbs sampler, as well as two other variants collapsing out the document-topic prior $\theta$, and further integrating out the term-topic prior $\beta$. We implement all algorithms and compare their performance on a synthetic data set drawn from the LDA generative model. 
+We study Gibbs sampling for Latent Dirichlet Allocation (LDA), a mixed-membership model relevant in topic modeling in natural language processing, as well as other applications such as collaborative filtering \cite{blei2003lda}. We derive a full Gibbs sampler, as well as two other variants collapsing out the document-topic prior $\theta$, and further integrating out the term-topic prior $\beta$. We implement all algorithms and compare their performance on a synthetic data set drawn from the LDA generative model. 
 }
 
 
@@ -109,7 +109,7 @@ The Bayesian network representation encodes the following generative model:
 \large{
 	First note the posterior distribution for $\theta, Z$:
 	$$	
-	p(\theta, Z | x, \alpha, \beta) = \dfrac{p(\theta, Z, X | \alpha, \beta)}{p(X | \alpha, \beta)}
+	p(\theta, Z | X, \alpha, \beta) = \dfrac{p(\theta, Z, X | \alpha, \beta)}{p(X | \alpha, \beta)}
 	$$
 	
 	where $p(X | \alpha, \beta)$ leads to an intractable integral. 
@@ -117,11 +117,11 @@ The Bayesian network representation encodes the following generative model:
 	The key hurdle on the way to a Gibbs sampler is to write the full conditional distributions. In the report, we derive the full conditional distributions in detail, working with a few key ideas:
 	
 	\begin{itemize}
-		\item If we don't require $\theta$ is also learned, we can integrate it out of the joint distribution. We can then use the convenient fact that $p(Z|\alpha, \beta) \propto p(Z, X|\alpha, \beta)$. Then sample from $p(z_n | z_{\neg n}, \alpha, \beta)$ - a collapsed Gibbs sampler.
+		\item If we don't require $\theta$ is also inferred, we can integrate it out of the joint distribution. We can then use the convenient fact that $p(Z|X,\alpha, \beta) \propto p(Z, X|\alpha, \beta)$. Then sample from $p(z_n | z_{\neg n},X, \alpha, \beta)$
 		
 		\item We may also like to infer $\beta$, in which case we would model $\beta$ as drawn from a Dirichlet distribution and sample from it, we do this in Algorithm \ref{alg:coltheta}.
 		
-		\item It is possible to integrate out $\beta$ as well, in which case one may just draw samples from $Z$, as in Algorithm \ref{alg:collapsed}.
+		\item It is possible to integrate out $\beta$ as well, in which case one may just draw samples from $Z$, as in Algorithm \ref{alg:collapsed} (Collapsed Gibbs Sampler \cite{griffiths2004collapsed})
 		
 		\item We may like to draw samples from all of $\theta, \beta, Z$. We present pseudocode in Algorithm \ref{alg:full}.
 	\end{itemize}
@@ -140,12 +140,12 @@ The Bayesian network representation encodes the following generative model:
 			\For{$i = 1$ to NR\_SAMPLES}
 				\ForAll{documents $m$}
 					\ForAll{words $n$}
-						 \State Sample $z'_n | \beta, \theta_m \sim P(z_{n}|\theta_m) P(x_{n}|z_{n}, \beta) $
+						 \State Sample $z_n | x_n, \beta, \theta_m \sim P(z_{n}|\theta_m) P(x_{n}|z_{n}, \beta) $
 					\EndFor
-					\State Sample $\theta'_m | Z', \beta \sim Dirichlet(\alpha + [N_1, N_2, \dots N_K])$ 
+					\State Sample $\theta_m | Z, \beta \sim Dirichlet(\alpha + [N_1, N_2, \dots N_K])$ 
 				\EndFor
 				\ForAll{topics $k$}
-					\State Sample $\beta'_k | Z', \Theta' \sim Dirichlet(\gamma + C_k)$
+					\State Sample $\beta_k | Z, \Theta \sim Dirichlet(\gamma + C_k)$
 				\EndFor
 			\EndFor
 			\EndFunction
@@ -162,11 +162,11 @@ The Bayesian network representation encodes the following generative model:
 		\For{$i = 1$ to NR\_SAMPLES}
 		\ForAll{documents $m$}
 		\ForAll{words $n$}
-		\State Sample $z'_n | \beta \sim \mathcal{M}(\beta_{n} (N_k - 1 + \alpha))$ 
+		\State Sample $z_n | \beta \sim \mathcal{M}(\beta_{n} (N_k - 1 + \alpha))$ 
 		\EndFor
 		\EndFor
 		\ForAll{topics $k$}
-		\State Sample $\beta'_k | Z'  \sim Dirichlet(\gamma + C_k)$
+		\State Sample $\beta_k | Z \sim Dirichlet(\gamma + C_k)$
 		\EndFor
 		\EndFor
 		\EndFunction
@@ -181,7 +181,7 @@ The Bayesian network representation encodes the following generative model:
 		\For{$i = 1$ to NR\_SAMPLES}
 		\ForAll{documents $m$}
 		\ForAll{words $n$}
-		\State Sample $z'_n | \beta \sim \mathcal{M}(\frac{C_{k,v}  -1 + \gamma_{v}}{\sum_{ v^{\prime} \in \mathcal{X}}C_{k,v^{\prime}} - 1 + \gamma_{v^{\prime}}} (N_k - 1 + \alpha_k))$ 
+		\State Sample $z_n | \beta \sim \mathcal{M}(\frac{C_{k,v}  -1 + \gamma_{v}}{\sum_{ v^{\prime} \in \mathcal{X}}C_{k,v^{\prime}} - 1 + \gamma_{v^{\prime}}} (N_k - 1 + \alpha_k))$ 
 		\EndFor
 		\EndFor
 		\EndFor

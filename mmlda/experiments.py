@@ -6,7 +6,7 @@ from lda import LDA, _doc_update, _slice_doc_update
 # Generate some data:
 V = 1000
 M = 500
-numwords = 40
+numwords = 20
 K = 5
 alpha = 1./5
 lmda = 1./2
@@ -23,31 +23,50 @@ for d in range(M):
         w_n = np.random.choice(np.arange(V), p=beta[z, :])
         X[d, w_n] += 1
 
-lda = LDA(alpha=alpha, lmda=lmda, nr_em_epochs=5)
-
-print "Collapsed theta, not beta"
-props, word_props, log_Xs, perp = lda.collapsed_theta_gibbs_sample(X)
-# plt.plot(range(len(log_Xs)), log_Xs, '*-')
-# plt.show()
-#
-# plt.plot(range(len(perp)), perp, 'o-')
-# plt.show()
+lda = LDA(alpha=alpha, lmda=lmda, nr_em_epochs=10)
 
 print "No collapsing"
-props, word_props, log_Xs, perp = lda.gibbs_sample(X)
+props, word_props, log_Xsno, perpno = lda.gibbs_sample(X)
+# plt.plot(range(len(log_Xs)), log_Xs, '*-')
+# plt.show()
+#
+# plt.plot(range(len(perp)), perp, 'o-')
+# plt.show()
+print "Perplexity:"
+print perpno
+
+print "logX:"
+print log_Xsno
+
+print "All collapsed"
+props, word_props, log_Xsc, perpc = lda.collapsed_gibbs_sample(X)
 # plt.plot(range(len(log_Xs)), log_Xs, '*-')
 # plt.show()
 #
 # plt.plot(range(len(perp)), perp, 'o-')
 # plt.show()
 
-print "All collapsed"
-props, word_props, log_Xs, perp = lda.collapsed_gibbs_sample(X)
+
+print "Collapsed theta, not beta"
+props, word_props, log_Xsct, perpct = lda.collapsed_theta_gibbs_sample(X)
 # plt.plot(range(len(log_Xs)), log_Xs, '*-')
 # plt.show()
 #
 # plt.plot(range(len(perp)), perp, 'o-')
 # plt.show()
+print "Perplexity:"
+print perpct
+
+print "logX:"
+print log_Xsct
+
+
+print "Perplexity:"
+print perpc
+
+print "logX:"
+print log_Xsc
+
 
 
 

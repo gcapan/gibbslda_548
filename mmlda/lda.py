@@ -376,8 +376,6 @@ class LDA(object):
         #initialize everything uniformly, sparse topics
         Beta = np.ones(shape=(K, V), dtype=float) / V
         Theta = np.ones(shape=(M, K), dtype=float)/ K
-        #Current Z
-        Ns = np.array(range(M), dtype=object)
 
         #Running sum
         MC_z = np.array(range(M), dtype=object)
@@ -389,37 +387,30 @@ class LDA(object):
             word_indices = X[d, :].nonzero()[1]
             random_ks = np.random.choice(topics, size = len(word_indices))
             Theta[d] = np.random.dirichlet(np.ones(K)*alpha)
-            Ns[d] = sp.coo_matrix((np.ones(len(word_indices)),
-                                   (word_indices, random_ks)), shape=(V, K)).tolil()
             MC_z[d] = sp.coo_matrix((V, K), dtype=np.int8).tolil()
         for k in topics:
             Beta[k] = np.random.dirichlet(np.ones(V)*lmda)
 
         log_Xs = []
         perplexities = []
+        t = 0
         for epoch in xrange(self.nr_em_epochs):
             print "Epoch", epoch
+            t +=1
             C = np.zeros((K, V))
             for d in np.random.permutation(np.arange(M)):
                 x = X[d]
-                N_d = Ns[d]
-                for v in np.nonzero(x)[1]:
-                    old_z_n = N_d[v, :].nonzero()[1][0]
-                    # sample z given theta and beta (z is independent from other z's given theta):
-                    p_z_n = Theta[d, :] * Beta[:, v]
-                    p = p_z_n / np.sum(p_z_n)
-                    z_n = np.random.choice(topics, p=p)
-                    N_d[v, old_z_n] = 0
-                    N_d[v, z_n] = 1
+                ixw = np.nonzero(x)[1]
+                p_s = Beta[:, ixw].T * Theta[d, :]
+                Z = [np.random.choice(topics, p=(p/np.sum(p))) for p in p_s]
+                N_d = sp.coo_matrix((np.ones(len(ixw)), (ixw, Z)), shape=(V, K)).tolil()
                 C = C + N_d.A.T
                 # sample theta given z and beta
                 c_theta = (np.sum(N_d.A, axis=0) + alpha)
                 Theta[d, :] = np.random.dirichlet(c_theta)
-                Ns[d] = N_d
                 MC_z[d] += N_d
 
             # Sample beta given all z and thetas
-            # c_Beta = (C.T / np.sum(C, axis=1) + lmda).T
             for k in topics:
                 c_beta = C[k, :]
                 Beta[k, :] = np.random.dirichlet(c_beta + lmda)
@@ -428,12 +419,12 @@ class LDA(object):
             MC_beta += Beta
 
             log_X = 0
-            Theta_hat = (MC_theta.T / (np.sum(MC_theta, axis=1))).T
-            Beta_hat = (MC_beta.T / (np.sum(MC_beta, axis = 1))).T
+            Theta_hat = MC_theta / t
+            Beta_hat = MC_beta / t
 
             for d in range(M):
                 ixw = np.nonzero(X[d, :])[1]
-                log_X += np.sum(_doc_probability(Theta_hat[d, :], Beta_hat[:, ixw]))
+                log_X += np.sum(_doc_probability_from_p_of_z(Theta_hat[d, :], Beta_hat[:, ixw]))
 
             log_Xs.append(log_X)
             print log_X
@@ -479,15 +470,20 @@ class LDA(object):
 
         log_Xs = []
         perplexities =[]
+        t = 0
         for epoch in xrange(self.nr_em_epochs):
+            t+=1
             C = np.zeros((K, V))
             print "Epoch", epoch
             for d in np.random.permutation(np.arange(M)):
                 x = X[d]
                 N_d = Ns[d]
+
                 for v in np.nonzero(x)[1]:
+                    except_v = [v_prime for v_prime in np.nonzero(x)[1] if v_prime != v]
+                    N_d_except_v = N_d[except_v, :]
                     old_z_n = N_d[v, :].nonzero()[1][0]
-                    p = (np.sum(N_d.A, axis=0) -1 + alpha) * Beta[:, v]
+                    p = (np.sum(N_d_except_v.A, axis=0) + alpha) * Beta[:, v]
                     p = p.clip(min=0)
                     p = p/np.sum(p)
                     z_n = np.random.choice(topics, p = p)
@@ -498,14 +494,13 @@ class LDA(object):
                 C = C + N_d.A.T
 
             # Sample beta given all z and thetas
-            #c_Beta = (C.T / np.sum(C, axis=1) + lmda).T
             for k in topics:
                 c_beta = C[k, :]
                 Beta[k, :] = np.random.dirichlet(c_beta + lmda)
             MC_beta += Beta
 
             log_X = 0
-            Beta_hat = (MC_beta.T / (np.sum(MC_beta, axis = 1))).T
+            Beta_hat = MC_beta / t
             for d in range(M):
                 props_d = np.sum(MC_z[d].A, axis=0)
                 props_d /= float(np.sum(props_d))
